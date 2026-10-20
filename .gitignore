@@ -1,0 +1,47 @@
+# .NET build output
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Test results
+TestResults/
+*.trx
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+
+# Database files
+*.mdf
+*.ldf
+
+# Audio files added later
+*.mp3
+*.wav
+*.m4a
+
+# IDE
+.vscode/
+.idea/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Local development configuration
+appsettings.Development.json
+appsettings.*.Local.json
+
+# Local logs
+*.log
+api-startup-error.txt
+
+# Publish artifacts
+**/publish/
+artifacts/

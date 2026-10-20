@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#173c35"><title>Thuyết minh du lịch</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#18332d;background:#f4f6f2}body{margin:0}.wrap{max-width:760px;margin:36px auto;padding:20px}.card{background:white;border-radius:18px;padding:24px;margin:16px 0;box-shadow:0 5px 24px #18332d12}h1{font-size:1.6rem}input,select,button{font:inherit;padding:12px;border-radius:10px;border:1px solid #cbd5ce}button{background:#174f41;color:white;border:0;cursor:pointer;margin:5px 4px 5px 0}button.secondary{background:#e4eee8;color:#18332d}.muted{color:#60726b}.location{border-top:1px solid #e4e9e5;padding:16px 0}.hidden{display:none}#qrcode{margin:20px 0}audio{width:100%}label{display:block;margin:12px 0 5px}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+</head>
+<body><main class="wrap">
+  <h1>🎧 Thuyết minh du lịch</h1>
+  <section id="tour" class="card hidden"><p id="status" class="muted">Đang tải nội dung…</p><div id="content"></div></section>
+  <section class="card" id="generator"><h2>Tạo mã QR cho tour</h2><p class="muted">Nhập mã QR do đơn vị quản lý cung cấp. Mã QR tạo ra sẽ mở trực tiếp trang thuyết minh này.</p><label for="code">Mã truy cập</label><input id="code" value="VNTQ-DEMO-2026" autocomplete="off"><button id="make">Tạo QR</button><div id="qrcode"></div><p id="qrurl" class="muted"></p></section>
+</main>
+<script>
+const languages=['vi','en','zh-CN','zh-HK','es'];
+let cachedTourCode = null;
+let cachedTourData = null;
+
+const speechVoiceConfig = {
+ vi:    { label: 'tiếng Việt', locale: 'vi-VN', aliases: ['vi-vn', 'vi'] },
+ en:    { label: 'tiếng Anh', locale: 'en-US', aliases: ['en-us', 'en-gb', 'en'] },
+ 'zh-CN': { label: 'tiếng Trung phổ thông (Trung Quốc đại lục)', locale: 'zh-CN', aliases: ['zh-cn', 'zh-hans-cn', 'cmn-hans-cn', 'cmn-cn', 'zh-hans'] },
+ 'zh-HK': { label: 'tiếng Quảng Đông (Hồng Kông)', locale: 'zh-HK', aliases: ['zh-hk', 'zh-hant-hk', 'yue-hk', 'yue'] },
+ es:     { label: 'tiếng Tây Ban Nha', locale: 'es-ES', aliases: ['es-es', 'es-mx', 'es'] }
+};
+let cachedSpeechVoices = [];
+function normalizeVoiceLocale(locale) {
+ return String(locale || '').replace(/_/g, '-').replace(/#.*$/, '').toLowerCase();
+}
+function refreshSpeechVoices() {
+ try {
+  const voices = window.speechSynthesis.getVoices();
+  if (voices && voices.length) cachedSpeechVoices = voices;
+ } catch (_) { /* Một số trình duyệt di động có thể chưa sẵn sàng liệt kê giọng đọc. */ }
+}
+if ('speechSynthesis' in window) {
+ refreshSpeechVoices();
+ if (typeof window.speechSynthesis.addEventListener === 'function') {
+  window.speechSynthesis.addEventListener('voiceschanged', refreshSpeechVoices);
+ } else {
+  window.speechSynthesis.onvoiceschanged = refreshSpeechVoices;
+ }
+}
+function findSpeechVoice(lang) {
+ refreshSpeechVoices();
+ const config = speechVoiceConfig[lang] || speechVoiceConfig.vi;
+ const voices = cachedSpeechVoices;
+ if (!voices.length) return null;
+ // Ưu tiên locale khớp chính xác. Đặc biệt không lấy giọng zh-HK làm phương án dự phòng cho zh-CN.
+ for (const alias of config.aliases) {
+  const exact = voices.find(v => normalizeVoiceLocale(v.lang) === alias);
+  if (exact) return exact;
+ }
+ // Chấp nhận biến thể vùng của cùng locale, nhưng vẫn giữ riêng hai nhóm Trung Quốc đại lục/Hồng Kông.
+ for (const alias of config.aliases) {
+  const regional = voices.find(v => normalizeVoiceLocale(v.lang).startsWith(alias + '-'));
+  if (regional) return regional;
+ }
+ return null;
+}
+function setVoiceStatus(message) {
+ const el = document.querySelector('#voice-status');
+ if (el) el.textContent = message;
+}
+function speak(text, lang) {
+ if (!text) return;
+ if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+  setVoiceStatus('Trình duyệt này không hỗ trợ đọc văn bản.');
+  return;
+ }
+ const config = speechVoiceConfig[lang] || speechVoiceConfig.vi;
+ const voice = findSpeechVoice(lang);
+ const isChineseVariant = lang === 'zh-CN' || lang === 'zh-HK';
+ if (!voice && isChineseVariant) {
+  const availableChinese = cachedSpeechVoices
+   .filter(v => /^(zh|cmn|yue)(-|$)/i.test(normalizeVoiceLocale(v.lang)))
+   .map(v => `${v.name} (${v.lang})`);
+  const list = availableChinese.length ? ` Giọng tiếng Trung trình duyệt báo có: ${availableChinese.join(', ')}.` : ' Trình duyệt chưa báo giọng tiếng Trung tương ứng.';
+  setVoiceStatus(`Không tìm thấy giọng ${config.label} (${config.locale}) trên thiết bị.${list} Hãy cài giọng phù hợp trong cài đặt điện thoại rồi thử lại; ứng dụng sẽ không tự thay giọng phổ thông bằng giọng Hồng Kông hoặc ngược lại.`);
+  return;
+ }
+ window.speechSynthesis.cancel();
+ const utterance = new SpeechSynthesisUtterance(text);
+ utterance.lang = config.locale;
+ if (voice) utterance.voice = voice;
+ utterance.onstart = () => setVoiceStatus(voice
+  ? `Đang dùng giọng: ${voice.name} (${voice.lang}).`
+  : `Đang yêu cầu trình duyệt đọc bằng ${config.label} (${config.locale}); trình duyệt không công bố giọng khớp chính xác.`);
+ utterance.onerror = event => setVoiceStatus(`Không phát được giọng đọc: ${event.error || 'lỗi đọc văn bản'}.`);
+ window.speechSynthesis.speak(utterance);
+}
+
+async function loadTour(code,lang='vi'){
+ const section=document.querySelector('#tour'), status=document.querySelector('#status'), content=document.querySelector('#content');
+ section.classList.remove('hidden');document.querySelector('#generator').classList.add('hidden');
+ try{
+  // Reuse the first response when changing language. This is required for SingleUse QR codes,
+  // because their first successful API request deactivates the code.
+  if(cachedTourCode===code && cachedTourData){renderTour(cachedTourData,code,lang);return;}
+  status.textContent='Đang tải nội dung…';
+  const response=await fetch(`/api/public/tours/qr/${encodeURIComponent(code)}?language=${encodeURIComponent(lang)}`);
+  const data=await response.json();
+  if(!response.ok)throw Error(data.message||'Không tải được tour.');
+  cachedTourCode=code;
+  cachedTourData=data;
+  renderTour(data,code,lang);
+ }catch(e){status.textContent=e.message;content.innerHTML='';}
+}
+
+function renderTour(data,code,lang){
+ const section=document.querySelector('#tour'), status=document.querySelector('#status'), content=document.querySelector('#content');
+ section.classList.remove('hidden');
+ const t=data.tour;
+ const languageKey=String(lang).toLowerCase();
+ const tourTranslations=t.translations||[];
+ const tourFallback=tourTranslations.find(x=>String(x.languageCode).toLowerCase()==='vi');
+ const tourTranslation=tourTranslations.find(x=>String(x.languageCode).toLowerCase()===languageKey)||tourFallback;
+ const tourName=tourTranslation?.name||t.name;
+ const tourDescription=tourTranslation?.description??t.description??'';
+ const welcomeMessage=tourTranslation?.welcomeMessage??t.welcomeMessage??'';
+ const locations=(t.locations||[]).map(l=>{
+  const allTranslations=l.translations||[];
+  const fallback=allTranslations.find(x=>String(x.languageCode).toLowerCase()==='vi');
+  const translation=allTranslations.find(x=>String(x.languageCode).toLowerCase()===languageKey)||fallback;
+  return {...l,
+   name:translation?.title||l.name,
+   description:translation?.description??l.description??'',
+   narrationText:translation?.narrationText??l.narrationText??'',
+   audioUrl:translation?.audioUrl??l.audioUrl??''
+  };
+ });
+ status.textContent='Mã QR hợp lệ';
+ content.innerHTML=`<h2>${escapeHtml(tourName)}</h2><p>${escapeHtml(tourDescription)}</p><p>${escapeHtml(welcomeMessage)}</p><label>Ngôn ngữ</label><select id="language">${languages.map(x=>`<option value="${x}" ${x===lang?'selected':''}>${x}</option>`).join('')}</select><button id="welcome">🔊 Nghe lời chào</button><p id="voice-status" class="muted" role="status" aria-live="polite"></p><div id="locations"></div>`;
+ document.querySelector('#welcome').onclick=()=>speak(welcomeMessage,lang);
+ document.querySelector('#language').onchange=e=>loadTour(code,e.target.value);
+ document.querySelector('#locations').innerHTML=locations.map(l=>`<article class="location"><h3>${escapeHtml(l.displayOrder+'. '+l.name)}</h3><p>${escapeHtml(l.description)}</p><button class="secondary narration">🔊 Nghe thuyết minh</button>${l.audioUrl?`<audio controls preload="none" src="${escapeHtml(l.audioUrl)}"></audio>`:''}</article>`).join('');
+ document.querySelectorAll('.narration').forEach((b,i)=>b.onclick=()=>speak(locations[i].narrationText,lang));
+}
+
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+document.querySelector('#make').onclick=()=>{const code=document.querySelector('#code').value.trim();if(!code)return;const url=`${location.origin}/tour/${encodeURIComponent(code)}`;document.querySelector('#qrcode').innerHTML='';if(!window.QRCode){document.querySelector('#qrurl').textContent='Không tải được thư viện tạo QR. Hãy thử tải lại trang.';return}new QRCode(document.querySelector('#qrcode'),{text:url,width:220,height:220});document.querySelector('#qrurl').textContent=url};
+const params = new URLSearchParams(location.search);
+if (params.has('code')) {
+  loadTour(params.get('code'), params.get('language') || 'vi');
+} else {
+  // Deferred scripts run before DOMContentLoaded. Create the default QR only after the page is ready.
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('#make').click();
+  }, { once: true });
+}
+</script></body></html>
