@@ -89,6 +89,20 @@ public sealed class AuthServiceTests
             PreferredLanguageCode = "vi"
         }));
     }
+    [Fact]
+    public async Task RegisterAsync_WithMissingDisplayName_ThrowsInvalidRequestException()
+    {
+        var service = CreateService(new FakeUserRepository());
+
+        await Assert.ThrowsAsync<InvalidRequestException>(() =>
+            service.RegisterAsync(new RegisterRequest
+            {
+                Email = "missing-name@example.com",
+                Password = ValidPassword,
+                DisplayName = " ",
+                PreferredLanguageCode = "vi"
+            }));
+    }
 
     [Fact]
     public async Task RegisterAsync_WithUnsupportedLanguage_ThrowsInvalidRequestException()
