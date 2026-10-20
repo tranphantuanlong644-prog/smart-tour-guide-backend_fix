@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartTourGuide.Data.Context;
@@ -12,8 +13,15 @@ namespace SmartTourGuide.API.Controllers;
 public sealed class PublicToursController : ControllerBase
 {
     private readonly SmartTourGuideDbContext _db;
+    private readonly IWebHostEnvironment _environment;
 
-    public PublicToursController(SmartTourGuideDbContext db) => _db = db;
+    public PublicToursController(
+        SmartTourGuideDbContext db,
+        IWebHostEnvironment environment)
+    {
+        _db = db;
+        _environment = environment;
+    }
 
     [HttpGet("qr/{accessCode}")]
     public async Task<IActionResult> GetByQrCode(
@@ -81,7 +89,7 @@ public sealed class PublicToursController : ControllerBase
                         Name = selectedTranslation?.Title ?? l.DefaultName,
                         Description = selectedTranslation?.Description,
                         NarrationText = selectedTranslation?.NarrationText,
-                        AudioUrl = selectedTranslation?.AudioUrl,
+                        AudioUrl = GetAvailableAudioUrl(selectedTranslation?.AudioUrl),
                         l.ImageUrl,
                         l.DisplayOrder,
                         Translations = l.Translations.Select(t => new
@@ -90,7 +98,7 @@ public sealed class PublicToursController : ControllerBase
                             t.Title,
                             t.Description,
                             t.NarrationText,
-                            t.AudioUrl
+                            AudioUrl = GetAvailableAudioUrl(t.AudioUrl)
                         }).ToList()
                     };
                 }).ToList()
@@ -111,4 +119,28 @@ public sealed class PublicToursController : ControllerBase
 
         return Ok(new { qrCodeId = qr.Id, language = normalizedLanguage, tour });
     }
+    private string? GetAvailableAudioUrl(string? audioUrl)
+    {
+        if (string.IsNullOrWhiteSpace(audioUrl))
+            return null;
+
+        var normalizedUrl = audioUrl.Trim().Replace('\\', '/');
+
+        // Only serve local files under wwwroot/audio. This prevents returning
+        // stale seed URLs or arbitrary paths as usable media links.
+        if (!normalizedUrl.StartsWith("/audio/", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var fileName = Path.GetFileName(normalizedUrl);
+        if (string.IsNullOrWhiteSpace(fileName))
+            return null;
+
+        var webRootPath = _environment.WebRootPath;
+        if (string.IsNullOrWhiteSpace(webRootPath))
+            return null;
+
+        var physicalPath = Path.Combine(webRootPath, "audio", fileName);
+        return System.IO.File.Exists(physicalPath) ? normalizedUrl : null;
+    }
+
 }

@@ -135,7 +135,7 @@ function renderTour(data,code,lang){
  content.innerHTML=`<h2>${escapeHtml(tourName)}</h2><p>${escapeHtml(tourDescription)}</p><p>${escapeHtml(welcomeMessage)}</p><label>Ngôn ngữ</label><select id="language">${languages.map(x=>`<option value="${x}" ${x===lang?'selected':''}>${x}</option>`).join('')}</select><button id="welcome">🔊 Nghe lời chào</button><p id="voice-status" class="muted" role="status" aria-live="polite"></p><div id="locations"></div>`;
  document.querySelector('#welcome').onclick=()=>speak(welcomeMessage,lang);
  document.querySelector('#language').onchange=e=>loadTour(code,e.target.value);
- document.querySelector('#locations').innerHTML=locations.map(l=>`<article class="location"><h3>${escapeHtml(l.displayOrder+'. '+l.name)}</h3><p>${escapeHtml(l.description)}</p><button class="secondary narration">🔊 Nghe thuyết minh</button>${l.audioUrl?`<audio controls preload="none" src="${escapeHtml(l.audioUrl)}"></audio>`:''}</article>`).join('');
+ document.querySelector('#locations').innerHTML=locations.map(l=>`<article class="location"><h3>${escapeHtml(l.displayOrder+'. '+l.name)}</h3><p>${escapeHtml(l.description)}</p><button class="secondary narration">🔊 Nghe thuyết minh</button>${l.audioUrl?`<audio controls preload="none" src="${escapeHtml(l.audioUrl)}"></audio>`:`<p class="muted">Chưa có file audio thu sẵn. Nội dung lời đọc hiện là dữ liệu mẫu; nút trên sử dụng giọng đọc của thiết bị.</p>`}</article>`).join('');
  document.querySelectorAll('.narration').forEach((b,i)=>b.onclick=()=>speak(locations[i].narrationText,lang));
 }
 

@@ -45,3 +45,7 @@ api-startup-error.txt
 # Publish artifacts
 **/publish/
 artifacts/
+!SmartTourGuide.API/wwwroot/audio/
+!SmartTourGuide.API/wwwroot/audio/*.mp3
+!SmartTourGuide.API/wwwroot/audio/*.wav
+!SmartTourGuide.API/wwwroot/audio/*.m4a
