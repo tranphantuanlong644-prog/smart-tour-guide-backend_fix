@@ -219,6 +219,50 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health/live");
 
+app.MapGet("/health/ready", async (
+    SmartTourGuide.Data.Context.SmartTourGuideDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    IResult response;
+
+    try
+    {
+        var canConnect = await db.Database.CanConnectAsync(
+            cancellationToken);
+
+        if (canConnect)
+        {
+            response = Results.Ok(new
+            {
+                status = "ready",
+                database = "reachable"
+            });
+        }
+        else
+        {
+            response = Results.Json(
+                new
+                {
+                    status = "not_ready",
+                    database = "unavailable"
+                },
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+    }
+    catch
+    {
+        response = Results.Json(
+            new
+            {
+                status = "not_ready",
+                database = "unavailable"
+            },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    return response;
+});
+
 app.MapGet("/tour/{accessCode}", (string accessCode) =>
     Results.Content(
         $"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><meta http-equiv='refresh' content='0;url=/?code={Uri.EscapeDataString(accessCode)}'></head><body>Đang mở thuyết minh...</body></html>",
