@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#173c35"><title>Thuyết minh du lịch</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <style>
-    :root{font-family:system-ui,sans-serif;color:#18332d;background:#f4f6f2}body{margin:0}.wrap{max-width:760px;margin:36px auto;padding:20px}.card{background:white;border-radius:18px;padding:24px;margin:16px 0;box-shadow:0 5px 24px #18332d12}h1{font-size:1.6rem}input,select,button{font:inherit;padding:12px;border-radius:10px;border:1px solid #cbd5ce}button{background:#174f41;color:white;border:0;cursor:pointer;margin:5px 4px 5px 0}button.secondary{background:#e4eee8;color:#18332d}.muted{color:#60726b}.location{border-top:1px solid #e4e9e5;padding:16px 0}.hidden{display:none}#qrcode{margin:20px 0}audio{width:100%}label{display:block;margin:12px 0 5px}
+    :root{font-family:system-ui,sans-serif;color:#18332d;background:#f4f6f2}body{margin:0}.wrap{max-width:760px;margin:36px auto;padding:20px}.card{background:white;border-radius:18px;padding:24px;margin:16px 0;box-shadow:0 5px 24px #18332d12}h1{font-size:1.6rem}input,select,button{font:inherit;padding:12px;border-radius:10px;border:1px solid #cbd5ce}button{background:#174f41;color:white;border:0;cursor:pointer;margin:5px 4px 5px 0}button.secondary{background:#e4eee8;color:#18332d}.muted{color:#60726b}.location{border-top:1px solid #e4e9e5;padding:16px 0}.hidden{display:none}#qrcode{margin:20px 0}audio{width:100%}label{display:block;margin:12px 0 5px}#sim-map{height:430px;border-radius:14px;overflow:hidden;border:1px solid #d7e1da}.map-help{background:#edf4ef;padding:12px;border-radius:10px}.map-status{min-height:1.5em;font-weight:600}.map-fallback{height:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:18px;background:linear-gradient(145deg,#e9f4ee,#f8f7ec)}.map-fallback-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}.map-fallback-list button{text-align:left;margin:0}@media(max-width:600px){.wrap{margin:10px auto;padding:12px}.card{padding:18px}#sim-map{height:360px}}
   </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 </head>
 <body><main class="wrap">
@@ -17,6 +19,47 @@
 const languages=['vi','en','zh-CN','zh-HK','es'];
 let cachedTourCode = null;
 let cachedTourData = null;
+let guestSession = null;
+let guestHeartbeatTimer = null;
+let lastGuestInteraction = Date.now();
+let simulationMap = null;
+let simulationMarker = null;
+
+for (const eventName of ['pointerdown', 'touchstart', 'keydown', 'scroll']) {
+ document.addEventListener(eventName, () => { lastGuestInteraction = Date.now(); }, { passive: true });
+}
+
+function startGuestTracking(sessionId, deviceId) {
+ if (guestHeartbeatTimer) clearInterval(guestHeartbeatTimer);
+ lastGuestInteraction = Date.now();
+ guestSession = { sessionId, deviceId };
+ const heartbeat = () => {
+  if (!guestSession || document.visibilityState !== 'visible') return;
+  const audioPlaying = [...document.querySelectorAll('audio')].some(audio => !audio.paused && !audio.ended);
+  if (Date.now() - lastGuestInteraction > 120000 && !audioPlaying) return;
+  fetch(`/api/public/tours/sessions/${encodeURIComponent(guestSession.sessionId)}/heartbeat`, {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ deviceId: guestSession.deviceId }), keepalive: true
+  }).catch(() => {});
+ };
+ heartbeat();
+ guestHeartbeatTimer = setInterval(heartbeat, 20000);
+}
+
+document.addEventListener('visibilitychange', () => {
+ if (document.visibilityState === 'visible' && guestSession) {
+  fetch(`/api/public/tours/sessions/${encodeURIComponent(guestSession.sessionId)}/heartbeat`, {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ deviceId: guestSession.deviceId }), keepalive: true
+  }).catch(() => {});
+ }
+});
+
+window.addEventListener('pagehide', () => {
+ if (!guestSession) return;
+ const payload = new Blob([JSON.stringify({ deviceId: guestSession.deviceId })], { type: 'application/json' });
+ navigator.sendBeacon(`/api/public/tours/sessions/${encodeURIComponent(guestSession.sessionId)}/end`, payload);
+});
 
 const speechVoiceConfig = {
  vi:    { label: 'tiếng Việt', locale: 'vi-VN', aliases: ['vi-vn', 'vi'] },
@@ -61,7 +104,7 @@ function findSpeechVoice(lang) {
  return null;
 }
 function setVoiceStatus(message) {
- const el = document.querySelector('#voice-status');
+ const el = document.querySelector('#voice-status') || document.querySelector('#detail-voice-status');
  if (el) el.textContent = message;
 }
 function speak(text, lang) {
@@ -100,9 +143,12 @@ async function loadTour(code,lang='vi'){
   // because their first successful API request deactivates the code.
   if(cachedTourCode===code && cachedTourData){renderTour(cachedTourData,code,lang);return;}
   status.textContent='Đang tải nội dung…';
-  const response=await fetch(`/api/public/tours/qr/${encodeURIComponent(code)}?language=${encodeURIComponent(lang)}`);
+  let deviceId=localStorage.getItem('stg-guest-device-id');
+  if(!deviceId){deviceId=window.crypto?.randomUUID?window.crypto.randomUUID():`guest-${Date.now()}-${Math.random().toString(36).slice(2)}`;localStorage.setItem('stg-guest-device-id',deviceId);}
+  const response=await fetch(`/api/public/tours/qr/${encodeURIComponent(code)}?language=${encodeURIComponent(lang)}&deviceId=${encodeURIComponent(deviceId)}`);
   const data=await response.json();
   if(!response.ok)throw Error(data.message||'Không tải được tour.');
+  startGuestTracking(data.sessionId,deviceId);
   cachedTourCode=code;
   cachedTourData=data;
   renderTour(data,code,lang);
@@ -132,11 +178,104 @@ function renderTour(data,code,lang){
   };
  });
  status.textContent='Mã QR hợp lệ';
- content.innerHTML=`<h2>${escapeHtml(tourName)}</h2><p>${escapeHtml(tourDescription)}</p><p>${escapeHtml(welcomeMessage)}</p><label>Ngôn ngữ</label><select id="language">${languages.map(x=>`<option value="${x}" ${x===lang?'selected':''}>${x}</option>`).join('')}</select><button id="welcome">🔊 Nghe lời chào</button><p id="voice-status" class="muted" role="status" aria-live="polite"></p><div id="locations"></div>`;
+ content.innerHTML=`<h2>${escapeHtml(tourName)}</h2><p>${escapeHtml(tourDescription)}</p><p>${escapeHtml(welcomeMessage)}</p><label>Ngôn ngữ</label><select id="language">${languages.map(x=>`<option value="${x}" ${x===lang?'selected':''}>${x}</option>`).join('')}</select><button id="welcome">🔊 Nghe lời chào</button><p id="voice-status" class="muted" role="status" aria-live="polite"></p><section class="location-map"><h2>📍 Mô phỏng GPS trên bản đồ</h2><p class="map-help">Chạm vào một điểm trên bản đồ để mô phỏng vị trí của bạn. Nếu điểm đó cách địa điểm thuyết minh gần nhất không quá 12 m, app sẽ đọc nội dung tương ứng. Bản đồ dùng OpenStreetMap.</p><div id="sim-map" aria-label="Bản đồ mô phỏng vị trí tại Việt Nam Quốc Tự"></div><p id="map-status" class="map-status muted" role="status" aria-live="polite">Đang tải bản đồ…</p></section><h2>Các khu vực thuyết minh</h2><div id="locations"></div>`;
  document.querySelector('#welcome').onclick=()=>speak(welcomeMessage,lang);
  document.querySelector('#language').onchange=e=>loadTour(code,e.target.value);
  document.querySelector('#locations').innerHTML=locations.map(l=>`<article class="location"><h3>${escapeHtml(l.displayOrder+'. '+l.name)}</h3><p>${escapeHtml(l.description)}</p><button class="secondary narration">🔊 Nghe thuyết minh</button>${l.audioUrl?`<audio controls preload="none" src="${escapeHtml(l.audioUrl)}"></audio>`:`<p class="muted">Chưa có file audio thu sẵn. Nội dung lời đọc hiện là dữ liệu mẫu; nút trên sử dụng giọng đọc của thiết bị.</p>`}</article>`).join('');
  document.querySelectorAll('.narration').forEach((b,i)=>b.onclick=()=>speak(locations[i].narrationText,lang));
+ renderSimulationMap(locations,lang,code);
+ const requestedLocationId=new URLSearchParams(location.search).get('location');
+ const requestedLocation=locations.find(x=>x.id===requestedLocationId);
+ if(requestedLocation)openLocationDetail(requestedLocation,lang,code,false);
+}
+
+function distanceMeters(a,b){
+ const radians=value=>value*Math.PI/180;
+ const dLat=radians(b.latitude-a.latitude),dLon=radians(b.longitude-a.longitude);
+ const lat1=radians(a.latitude),lat2=radians(b.latitude);
+ const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+ return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+}
+
+function renderSimulationMap(locations,lang,code){
+ const status=document.querySelector('#map-status');
+ const demoCoordinates=[[10.77160,106.67352],[10.77182,106.67343],[10.77195,106.67343],[10.77182,106.67360],[10.77169,106.67331]];
+ const usable=locations.map((item,index)=>{
+  const fallback=demoCoordinates[Math.max(0,Math.min(demoCoordinates.length-1,(Number(item.displayOrder)||index+1)-1))];
+  const lat=Number(item.latitude),lng=Number(item.longitude);
+  return {...item,latitude:Number.isFinite(lat)&&lat!==0?lat:fallback[0],longitude:Number.isFinite(lng)&&lng!==0?lng:fallback[1],triggerRadiusMeters:Number(item.triggerRadiusMeters)||12};
+ });
+ if(!window.L){status.textContent='Không tải được nền bản đồ từ Internet. Bạn vẫn có thể chọn khu vực bên dưới.';renderMapFallback(usable,lang,code);return;}
+ if(simulationMap){simulationMap.remove();simulationMap=null;simulationMarker=null;}
+ const center=[10.7718218,106.6734327];
+ simulationMap=L.map('sim-map').setView(center,19);
+ let loadedTiles=0;
+ const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:21,attribution:'&copy; OpenStreetMap contributors'}).addTo(simulationMap);
+ tiles.on('tileload',()=>loadedTiles++);
+ setTimeout(()=>{if(loadedTiles===0&&document.querySelector('#sim-map')){status.textContent='Không tải được nền bản đồ. Bạn vẫn có thể chọn khu vực bên dưới.';renderMapFallback(usable,lang,code);}},6000);
+ const selectPosition=position=>{
+  const chosen={latitude:position.lat,longitude:position.lng};
+  if(simulationMarker)simulationMap.removeLayer(simulationMarker);
+  simulationMarker=L.marker([position.lat,position.lng]).addTo(simulationMap).bindPopup('Vị trí mô phỏng của bạn').openPopup();
+  const nearest=usable.map(location=>({location,distance:distanceMeters(chosen,{latitude:Number(location.latitude),longitude:Number(location.longitude)})})).sort((a,b)=>a.distance-b.distance)[0];
+  const radius=Math.min(Number(nearest.location.triggerRadiusMeters)||12,12);
+  if(nearest.distance<=radius){
+   status.textContent=`Đã chọn: ${nearest.location.name} (cách ${Math.round(nearest.distance)} m).`;
+   openLocationDetail(nearest.location,lang,code,true);
+  }else{
+   status.textContent=`Chưa có điểm thuyết minh trong bán kính 12 m. Điểm gần nhất là ${nearest.location.name}, cách ${Math.round(nearest.distance)} m.`;
+  }
+ };
+ usable.forEach(location=>{
+  const point=[Number(location.latitude),Number(location.longitude)];
+  const radius=Math.min(Number(location.triggerRadiusMeters)||12,12);
+  L.circle(point,{radius,color:'#176b52',weight:2,fillColor:'#39a77f',fillOpacity:.13}).addTo(simulationMap);
+  const marker=L.circleMarker(point,{radius:8,color:'#fff',weight:2,fillColor:'#176b52',fillOpacity:1}).addTo(simulationMap);
+  marker.bindTooltip(`${location.displayOrder}. ${escapeHtml(location.name)}`);
+  marker.on('click',()=>selectPosition({lat:point[0],lng:point[1]}));
+ });
+ simulationMap.on('click',event=>selectPosition(event.latlng));
+ status.textContent='Chạm vào bản đồ hoặc một chấm xanh để mô phỏng vị trí.';
+ setTimeout(()=>simulationMap?.invalidateSize(),100);
+}
+
+function renderMapFallback(locations,lang,code){
+ const mapElement=document.querySelector('#sim-map');
+ if(!mapElement)return;
+ if(simulationMap){simulationMap.remove();simulationMap=null;simulationMarker=null;}
+ mapElement.innerHTML=`<div class="map-fallback"><strong>Chọn khu vực để mô phỏng GPS</strong><div class="map-fallback-list">${locations.map((item,index)=>`<button type="button" data-location-index="${index}">📍 ${escapeHtml(item.name)}</button>`).join('')}</div><p class="muted small">Tọa độ demo gần đúng; có thể tinh chỉnh khi có tọa độ khảo sát.</p></div>`;
+ mapElement.querySelectorAll('[data-location-index]').forEach(button=>button.onclick=()=>openLocationDetail(locations[Number(button.dataset.locationIndex)],lang,code,true));
+}
+
+function openLocationDetail(locationData,lang,code,autoPlay){
+ if(simulationMap){simulationMap.remove();simulationMap=null;simulationMarker=null;}
+ const params=new URLSearchParams({code,language:lang,location:locationData.id});
+ history.pushState({locationId:locationData.id},'',`${location.pathname}?${params.toString()}`);
+ showLocationDetail(locationData,lang,code,autoPlay);
+}
+
+function showLocationDetail(locationData,lang,code,autoPlay){
+ const content=document.querySelector('#content');
+ const narration=locationData.narrationText||locationData.description||'Chưa có nội dung thuyết minh cho khu vực này.';
+ content.innerHTML=`<button id="back-to-map" class="secondary">← Quay lại bản đồ</button><article class="card"><p class="muted">Khu vực ${escapeHtml(String(locationData.displayOrder||''))}</p><h2>${escapeHtml(locationData.name)}</h2>${locationData.imageUrl?`<img src="${escapeHtml(locationData.imageUrl)}" alt="${escapeHtml(locationData.name)}" style="max-width:100%;border-radius:12px">`:''}<p>${escapeHtml(locationData.description)}</p><h3>Nội dung thuyết minh</h3><p>${escapeHtml(narration)}</p>${locationData.audioUrl?`<audio id="location-audio" controls preload="auto" src="${escapeHtml(locationData.audioUrl)}"></audio>`:''}<p id="detail-voice-status" class="muted" role="status" aria-live="polite">${autoPlay?'Đang bắt đầu thuyết minh…':'Nhấn nút bên dưới để nghe thuyết minh.'}</p><button id="replay-narration">🔊 Nghe thuyết minh</button></article>`;
+ document.querySelector('#back-to-map').onclick=()=>{
+  window.speechSynthesis?.cancel();
+  const backParams=new URLSearchParams({code,language:lang});
+  history.replaceState({},'',`${location.pathname}?${backParams.toString()}`);
+  renderTour(cachedTourData,code,lang);
+ };
+ const playNarration=()=>{
+  const audio=document.querySelector('#location-audio');
+  const status=document.querySelector('#detail-voice-status');
+  if(audio){
+   audio.play().then(()=>{status.textContent='Đang phát audio thuyết minh.';}).catch(()=>{status.textContent='Thiết bị chưa phát được audio; đang dùng giọng đọc của trình duyệt.';speak(narration,lang);});
+  }else{
+   speak(narration,lang);
+   status.textContent='Đang đọc thuyết minh bằng giọng của thiết bị.';
+  }
+ };
+ document.querySelector('#replay-narration').onclick=playNarration;
+ if(autoPlay)playNarration();
 }
 
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}

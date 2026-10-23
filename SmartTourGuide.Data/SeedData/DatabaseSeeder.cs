@@ -282,6 +282,8 @@ public static class DatabaseSeeder
                     MainGateLocationId,
                     "MAIN-GATE",
                     "Cổng chính",
+                    latitude: 10.77160,
+                    longitude: 106.67352,
                     displayOrder: 1,
                     createdAt: now),
 
@@ -289,6 +291,8 @@ public static class DatabaseSeeder
                     GeneralCampusLocationId,
                     "GENERAL-CAMPUS",
                     "Khuôn viên tổng quan",
+                    latitude: 10.77182,
+                    longitude: 106.67343,
                     displayOrder: 2,
                     createdAt: now),
 
@@ -296,6 +300,8 @@ public static class DatabaseSeeder
                     MainHallLocationId,
                     "MAIN-HALL",
                     "Chính điện",
+                    latitude: 10.77195,
+                    longitude: 106.67343,
                     displayOrder: 3,
                     createdAt: now),
 
@@ -303,6 +309,8 @@ public static class DatabaseSeeder
                     StupaLocationId,
                     "STUPA",
                     "Bảo tháp",
+                    latitude: 10.77182,
+                    longitude: 106.67360,
                     displayOrder: 4,
                     createdAt: now),
 
@@ -310,9 +318,26 @@ public static class DatabaseSeeder
                     HistoryAreaLocationId,
                     "HISTORY-AREA",
                     "Khu vực lịch sử",
+                    latitude: 10.77169,
+                    longitude: 106.67331,
                     displayOrder: 5,
                     createdAt: now)
             };
+
+        // Older demo databases contain (0, 0) placeholder coordinates.
+        // Replace those only; preserve any coordinates an admin has already set.
+        var seededIds = locations.Select(x => x.Id).ToArray();
+        var existingSeededLocations = await dbContext.TourLocations
+            .Where(x => seededIds.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+        foreach (var existing in existingSeededLocations.Where(x => x.Latitude == 0 && x.Longitude == 0))
+        {
+            var definition = locations.First(x => x.Id == existing.Id);
+            existing.Latitude = definition.Latitude;
+            existing.Longitude = definition.Longitude;
+            existing.TriggerRadiusMeters = 12;
+            existing.UpdatedAt = now;
+        }
 
         var missingLocations =
             locations
@@ -585,6 +610,8 @@ public static class DatabaseSeeder
         Guid id,
         string code,
         string defaultName,
+        double latitude,
+        double longitude,
         int displayOrder,
         DateTimeOffset createdAt)
     {
@@ -595,13 +622,10 @@ public static class DatabaseSeeder
             Code = code,
             DefaultName = defaultName,
 
-            // Chỉ là tọa độ placeholder kỹ thuật.
-            // Cần thay bằng tọa độ khảo sát thực tế.
-            Latitude = 0,
-            Longitude = 0,
+            Latitude = latitude,
+            Longitude = longitude,
 
-            TriggerRadiusMeters =
-                GpsDefaults.TriggerRadiusMeters,
+            TriggerRadiusMeters = 12,
 
             DisplayOrder = displayOrder,
             ImageUrl =

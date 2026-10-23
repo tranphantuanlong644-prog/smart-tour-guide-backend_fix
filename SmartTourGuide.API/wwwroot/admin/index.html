@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#173c35">
+  <title>Quản trị Smart Tour Guide</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#18332d;background:#f4f6f2}body{margin:0}.wrap{max-width:1000px;margin:24px auto;padding:16px}.top,.card{background:#fff;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 5px 24px #18332d12}.top{background:#173c35;color:#fff}.top p{color:#d7e8df}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.stat{background:#edf4ef;border-radius:12px;padding:14px}.stat strong{display:block;font-size:1.7rem}input,button{font:inherit;padding:10px;border-radius:9px;border:1px solid #cbd5ce}button{background:#174f41;color:#fff;border:0;cursor:pointer}label{display:block;margin:10px 0 4px}.muted{color:#60726b}.notice{background:#fff5d9;padding:12px;border-radius:10px}.status{min-height:1.4em}.small{font-size:.9rem}.qr-layout{display:flex;align-items:center;gap:24px;flex-wrap:wrap}.qr-box{background:#fff;padding:10px;min-width:220px;min-height:220px;display:grid;place-items:center;border:1px solid #e1e7e2;border-radius:12px}.qr-box canvas,.qr-box img{max-width:100%;height:auto}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:560px}th,td{text-align:left;padding:10px;border-bottom:1px solid #e4e9e5}@media(max-width:600px){.wrap{padding:10px}.card{padding:15px}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top"><h1>Quản trị Smart Tour Guide</h1><p>QR cố định cho tour Việt Nam Quốc Tự và thống kê lượt khách quét.</p><p class="small">Mở trang này trên máy chạy backend tại <strong>http://localhost:5011/admin/</strong>.</p></header>
+  <p id="status" class="status muted">Đang kết nối…</p>
+  <section class="card"><h2>Tổng quan</h2><div id="stats" class="stats"></div></section>
+  <section class="card">
+    <h2>Mã QR cố định</h2>
+    <p>QR luôn dùng mã truy cập <code>VNTQ-DEMO-2026</code>. Nhập địa chỉ IP của máy tính trong mạng Wi‑Fi/hotspot hiện tại để tạo ảnh QR cho khách quét.</p>
+    <label for="visitorBase">Địa chỉ máy tính mà điện thoại có thể truy cập</label>
+    <input id="visitorBase" style="width:min(100%,600px)" value="http://192.168.31.158:5011" autocomplete="url">
+    <p class="small muted">Lấy IPv4 của card Wi‑Fi máy tính bằng lệnh <code>ipconfig</code>. Điện thoại cần cùng Wi‑Fi/hotspot.</p>
+    <div class="qr-layout"><div id="qrimage" class="qr-box">Nhập địa chỉ ở trên để hiện QR</div><div><strong>Tour: Tham quan Việt Nam Quốc Tự</strong><p id="qrurl" class="small"></p><button id="download" disabled>Tải ảnh QR</button></div></div>
+  </section>
+  <section class="card"><h2>Phiên khách gần đây</h2><p class="muted small">Hệ thống ghi nhận phiên truy cập bằng mã thiết bị ngẫu nhiên, không thu tên hoặc số điện thoại. Hiển thị tối đa 100 phiên mới nhất.</p><div class="tablewrap"><table><thead><tr><th>Tour</th><th>Ngôn ngữ</th><th>Bắt đầu</th><th>Hoạt động gần nhất</th><th>Trạng thái</th></tr></thead><tbody id="sessions"></tbody></table></div></section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const fixedCode='VNTQ-DEMO-2026';
+const date=s=>s?new Date(s).toLocaleString('vi-VN'):'—';
+const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function message(text,warning=false){$('#status').textContent=text;$('#status').className=warning?'status notice':'status muted'}
+async function api(path){const response=await fetch('/api/admin'+path);if(!response.ok)throw Error(`HTTP ${response.status}`);return response.json()}
+function renderQr(){const entered=$('#visitorBase').value.trim();$('#qrimage').innerHTML='';$('#qrurl').textContent='';$('#download').disabled=true;if(!entered){$('#qrimage').textContent='Nhập địa chỉ IP ở trên để hiện QR';return}let base;try{base=new URL(entered)}catch{$('#qrimage').textContent='Địa chỉ chưa đúng. Ví dụ: http://10.182.27.19:5011';return}if(!['http:','https:'].includes(base.protocol)){$('#qrimage').textContent='Địa chỉ cần bắt đầu bằng http:// hoặc https://';return}if(!window.QRCode){$('#qrimage').textContent='Không tải được công cụ tạo QR. Hãy kiểm tra Internet rồi tải lại trang.';return}const url=`${base.origin}/tour/${fixedCode}`;new QRCode($('#qrimage'),{text:url,width:220,height:220});$('#qrurl').textContent=url;$('#download').disabled=false}
+async function refresh(){try{message('Đang tải thống kê…');const [overview,sessions]=await Promise.all([api('/overview'),api('/sessions')]);$('#stats').innerHTML=[['Tour đang mở',overview.tours],['Tổng lượt quét',overview.scans],['Tổng khách',overview.guestSessions],['Người đang sử dụng',overview.activeSessions]].map(([name,value])=>`<div class="stat"><span>${name}</span><strong>${value}</strong></div>`).join('');$('#sessions').innerHTML=sessions.map(s=>`<tr><td>${escapeHtml(s.tourName)}</td><td>${escapeHtml(s.languageCode)}</td><td>${date(s.startedAt)}</td><td>${date(s.lastActivityAt)}</td><td>${escapeHtml(String(s.status))}</td></tr>`).join('')||'<tr><td colspan="5">Chưa ghi nhận phiên khách nào</td></tr>';message('Đã kết nối với backend.')}catch(error){message('Không tải được dữ liệu: '+error.message,true)}}
+$('#visitorBase').addEventListener('input',renderQr);
+window.addEventListener('load',renderQr);
+$('#download').onclick=()=>{const canvas=$('#qrimage canvas');if(!canvas)return;const link=document.createElement('a');link.download='smart-tour-guide-qr-co-dinh.png';link.href=canvas.toDataURL('image/png');link.click()};
+refresh();setInterval(refresh,15000);
+</script>
+</body>
+</html>
