@@ -1,5 +1,5 @@
-using System.Net;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartTourGuide.Data.Context;
@@ -10,10 +10,10 @@ using SmartTourGuide.Shared.Enums;
 namespace SmartTourGuide.API.Controllers;
 
 /// <summary>
-/// No-login administration for a locally hosted demo. All data endpoints
-/// require a loopback connection and the localhost host name.
+/// Administration endpoints for users with the Administrator role.
 /// </summary>
 [ApiController]
+[Authorize(Roles = nameof(UserRole.Administrator))]
 [Route("api/admin")]
 public sealed class AdminController : ControllerBase
 {
@@ -24,8 +24,6 @@ public sealed class AdminController : ControllerBase
     [HttpGet("overview")]
     public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
-
         var now = DateTimeOffset.UtcNow;
         var activeSince = now.AddSeconds(-120);
         var activeGuests = await _db.TourSessions
@@ -53,7 +51,6 @@ public sealed class AdminController : ControllerBase
     [HttpGet("tours")]
     public async Task<IActionResult> GetTours(CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var tours = await _db.Tours.AsNoTracking()
             .OrderBy(x => x.DefaultName)
             .Select(x => new { x.Id, x.Code, x.DefaultName, x.IsActive, x.Address })
@@ -64,7 +61,6 @@ public sealed class AdminController : ControllerBase
     [HttpGet("tours/{id:guid}")]
     public async Task<IActionResult> GetTour(Guid id, CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var tour = await _db.Tours.AsNoTracking()
             .Where(x => x.Id == id)
             .Select(x => new
@@ -93,7 +89,6 @@ public sealed class AdminController : ControllerBase
     public async Task<IActionResult> CreateTour(
         [FromBody] SaveTourRequest request, CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var validation = ValidateTourRequest(request);
         if (validation is not null) return BadRequest(new { message = validation });
         var code = request.Code.Trim().ToUpperInvariant();
@@ -125,7 +120,6 @@ public sealed class AdminController : ControllerBase
         Guid id, [FromBody] SaveTourRequest request,
         CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var validation = ValidateTourRequest(request);
         if (validation is not null) return BadRequest(new { message = validation });
         var tour = await _db.Tours.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -165,7 +159,6 @@ public sealed class AdminController : ControllerBase
         Guid tourId, [FromBody] SaveLocationRequest request,
         CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var validation = ValidateLocationRequest(request);
         if (validation is not null) return BadRequest(new { message = validation });
         if (!await _db.Tours.AnyAsync(x => x.Id == tourId, cancellationToken))
@@ -204,7 +197,6 @@ public sealed class AdminController : ControllerBase
         Guid id, [FromBody] SaveLocationRequest request,
         CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var validation = ValidateLocationRequest(request);
         if (validation is not null) return BadRequest(new { message = validation });
         var location = await _db.TourLocations.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -251,7 +243,6 @@ public sealed class AdminController : ControllerBase
         Guid id, [FromBody] SetActiveRequest request,
         CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var location = await _db.TourLocations.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (location is null) return NotFound();
         location.IsActive = request.IsActive;
@@ -300,7 +291,6 @@ public sealed class AdminController : ControllerBase
         Guid id, [FromBody] SetActiveRequest request,
         CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var tour = await _db.Tours.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (tour is null) return NotFound();
         tour.IsActive = request.IsActive;
@@ -312,7 +302,6 @@ public sealed class AdminController : ControllerBase
     [HttpGet("qrcodes")]
     public async Task<IActionResult> GetQrCodes(CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var codes = await _db.TourQrCodes.AsNoTracking()
             .OrderByDescending(x => x.CreatedAt)
             .Select(x => new
@@ -329,7 +318,6 @@ public sealed class AdminController : ControllerBase
         [FromBody] CreateQrCodeRequest request,
         CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         if (request.ExpiresInDays is < 1 or > 3650)
             return BadRequest(new { message = "Thời hạn QR phải từ 1 đến 3650 ngày." });
         if (request.MaximumUsageCount is <= 0)
@@ -366,7 +354,6 @@ public sealed class AdminController : ControllerBase
     public async Task<IActionResult> DeactivateQrCode(
         Guid id, CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var qr = await _db.TourQrCodes.FirstOrDefaultAsync(
             x => x.Id == id, cancellationToken);
         if (qr is null) return NotFound();
@@ -379,7 +366,6 @@ public sealed class AdminController : ControllerBase
     [HttpGet("sessions")]
     public async Task<IActionResult> GetGuestSessions(CancellationToken cancellationToken)
     {
-        if (!IsLocalRequest()) return Forbid();
         var sessions = await _db.TourSessions.AsNoTracking()
             .Where(x => x.IdentityType == IdentityType.Guest)
             .OrderByDescending(x => x.StartedAt)
@@ -392,16 +378,6 @@ public sealed class AdminController : ControllerBase
                 x.ExpiresAt, x.SourceQrCodeId
             }).ToListAsync(cancellationToken);
         return Ok(sessions);
-    }
-
-    private bool IsLocalRequest()
-    {
-        var remoteIp = HttpContext.Connection.RemoteIpAddress;
-        var host = Request.Host.Host;
-        return remoteIp is not null
-            && IPAddress.IsLoopback(remoteIp)
-            && (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
-                || IPAddress.TryParse(host, out var address) && IPAddress.IsLoopback(address));
     }
 
     public sealed record SetActiveRequest(bool IsActive);
