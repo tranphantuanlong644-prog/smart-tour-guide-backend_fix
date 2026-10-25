@@ -6,7 +6,6 @@ using SmartTourGuide.Data.Context;
 using SmartTourGuide.Data.Entities;
 using SmartTourGuide.Shared.Constants;
 using SmartTourGuide.Shared.Enums;
-using SmartTourGuide.Shared.Enums;
 
 namespace SmartTourGuide.API.Controllers;
 
@@ -170,18 +169,41 @@ public sealed class PublicToursController : ControllerBase
             session.SourceQrCodeId = qr.Id;
         }
 
-        // Consume the QR only after we have loaded a valid tour response. The response
-        // contains all public translations, so changing language on this page is local
-        // and does not request the already-consumed SingleUse code again.
-        qr.UsageCount++;
-        qr.LastUsedAt = now;
-        if (qr.Type == SmartTourGuide.Shared.Enums.QrCodeType.SingleUse)
+        // Claim the QR with one conditional database update. A tracked read followed
+        // by an in-memory increment lets concurrent requests exceed the usage limit.
+        await using var transaction = await _db.Database.BeginTransactionAsync(
+            cancellationToken);
+
+        var claimedQrCodes = await _db.TourQrCodes
+            .Where(x => x.Id == qr.Id
+                && x.IsActive
+                && x.ExpiresAt > now
+                && (!x.MaximumUsageCount.HasValue
+                    || x.UsageCount < x.MaximumUsageCount.Value))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.UsageCount, x => x.UsageCount + 1)
+                .SetProperty(x => x.LastUsedAt, now)
+                .SetProperty(
+                    x => x.IsActive,
+                    x => x.Type != QrCodeType.SingleUse)
+                .SetProperty(
+                    x => x.UsedAt,
+                    x => x.Type == QrCodeType.SingleUse ? now : x.UsedAt)
+                .SetProperty(
+                    x => x.DeactivatedAt,
+                    x => x.Type == QrCodeType.SingleUse ? now : x.DeactivatedAt),
+                cancellationToken);
+
+        if (claimedQrCodes == 0)
         {
-            qr.IsActive = false;
-            qr.UsedAt = now;
-            qr.DeactivatedAt = now;
+            return NotFound(new
+            {
+                message = "Mã QR không hợp lệ, đã hết hạn hoặc tour đã ngừng hoạt động."
+            });
         }
+
         await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Ok(new { qrCodeId = qr.Id, sessionId = session.Id, language = normalizedLanguage, tour });
     }
