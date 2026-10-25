@@ -57,7 +57,8 @@ if (string.IsNullOrWhiteSpace(jwtOptions.Audience))
 if (string.IsNullOrWhiteSpace(jwtOptions.Key))
 {
     throw new InvalidOperationException(
-        "JWT signing key was not configured.");
+        "JWT signing key was not configured. Set Jwt:Key with user-secrets " +
+        "in development or Jwt__Key in the deployment environment.");
 }
 
 if (jwtOptions.Key.Length < 32)
