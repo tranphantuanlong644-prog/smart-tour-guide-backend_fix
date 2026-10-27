@@ -17,6 +17,21 @@
 </main>
 <script>
 const languages=['vi','en','zh-CN','zh-HK','es'];
+const uiStrings={
+ vi:{pageTitle:'Thuyết minh du lịch',loading:'Đang tải nội dung…',validQr:'Mã QR hợp lệ',qrNotFound:'Mã QR không hợp lệ, đã hết hạn hoặc tour không khả dụng.',loadError:'Không tải được nội dung tour. Vui lòng thử lại.',tourName:'Tour tham quan',language:'Ngôn ngữ',languageNames:['Tiếng Việt','Tiếng Anh','Tiếng Trung giản thể','Tiếng Quảng Đông (Hồng Kông)','Tiếng Tây Ban Nha'],welcome:'Nghe lời chào',gpsTitle:'📍 Mô phỏng GPS trên bản đồ',gpsHelp:'Chạm vào một điểm trên bản đồ để mô phỏng vị trí của bạn. Nếu điểm đó cách khu vực thuyết minh gần nhất không quá 12 m, ứng dụng sẽ đọc nội dung tương ứng. Bản đồ dùng OpenStreetMap.',mapAria:'Bản đồ mô phỏng vị trí tại Việt Nam Quốc Tự',loadingMap:'Đang tải bản đồ…',mapUnavailable:'Không tải được nền bản đồ từ Internet. Bạn vẫn có thể chọn khu vực bên dưới.',mapUnavailableShort:'Không tải được nền bản đồ. Bạn vẫn có thể chọn khu vực bên dưới.',tapMap:'Chạm vào bản đồ hoặc một chấm xanh để mô phỏng vị trí.',simulatedPosition:'Vị trí mô phỏng của bạn',selected:'Đã chọn: {name} (cách {distance} m).',outsideRadius:'Chưa có khu vực thuyết minh trong bán kính 12 m.',nearest:'Khu vực gần nhất là {name}, cách {distance} m.',chooseArea:'Chọn khu vực để mô phỏng GPS',coordinateNote:'Tọa độ demo gần đúng; có thể tinh chỉnh khi có tọa độ khảo sát.',areas:'Các khu vực thuyết minh',speak:'🔊 Nghe thuyết minh',noAudio:'Chưa có file audio thu sẵn. Nội dung lời đọc hiện là dữ liệu mẫu; nút trên sử dụng giọng đọc của thiết bị.',area:'Khu vực',narration:'Nội dung thuyết minh',noNarration:'Chưa có nội dung thuyết minh cho khu vực này.',back:'← Quay lại bản đồ',autoplay:'Đang bắt đầu thuyết minh…',pressPlay:'Nhấn nút bên dưới để nghe thuyết minh.',playingAudio:'Đang phát audio thuyết minh.',audioFallback:'Thiết bị chưa phát được audio; đang dùng giọng đọc của trình duyệt.',deviceReading:'Đang đọc thuyết minh bằng giọng của thiết bị.',ttsUnsupported:'Trình duyệt này không hỗ trợ đọc văn bản.',voice:'tiếng Việt',voiceMissing:'Không tìm thấy giọng {language} ({locale}) trên thiết bị.',availableVoices:' Giọng tiếng Trung trình duyệt báo có: {voices}.',noChineseVoice:' Trình duyệt chưa báo giọng tiếng Trung tương ứng.',installVoice:' Hãy cài giọng phù hợp trong cài đặt điện thoại rồi thử lại; ứng dụng sẽ không tự thay giọng phổ thông bằng giọng Hồng Kông hoặc ngược lại.',voiceUsing:'Đang dùng giọng: {name} ({locale}).',voiceRequested:'Đang yêu cầu trình duyệt đọc bằng {language} ({locale}); trình duyệt không công bố giọng khớp chính xác.',voiceError:'Không phát được giọng đọc: {error}.',translationMissing:'Nội dung chưa có bản dịch ở ngôn ngữ này.',generatorTitle:'Tạo mã QR cho tour',generatorText:'Nhập mã QR do đơn vị quản lý cung cấp. Mã QR tạo ra sẽ mở trực tiếp trang thuyết minh này.',accessCode:'Mã truy cập',makeQr:'Tạo QR'},
+ en:{pageTitle:'Tour Guide',loading:'Loading tour content…',validQr:'Valid QR code',qrNotFound:'The QR code is invalid, expired, or the tour is unavailable.',loadError:'Could not load the tour. Please try again.',tourName:'Tour',language:'Language',languageNames:['Vietnamese','English','Chinese (Simplified)','Cantonese (Hong Kong)','Spanish'],welcome:'Play welcome message',gpsTitle:'📍 Simulated GPS map',gpsHelp:'Tap a point on the map to simulate your location. If it is within 12 m of the nearest narrated area, the app will open that area and play its narration. Map data is provided by OpenStreetMap.',mapAria:'Simulated map of locations at Vietnam Quoc Tu',loadingMap:'Loading map…',mapUnavailable:'The map could not load from the Internet. You can still choose an area below.',mapUnavailableShort:'The map could not load. You can still choose an area below.',tapMap:'Tap the map or a green dot to simulate your location.',simulatedPosition:'Your simulated location',selected:'Selected: {name} ({distance} m away).',outsideRadius:'No narrated area was found within 12 m.',nearest:'The nearest area is {name}, {distance} m away.',chooseArea:'Choose an area to simulate GPS',coordinateNote:'Demo coordinates are approximate and can be refined after surveying.',areas:'Narrated areas',speak:'🔊 Play narration',noAudio:'No recorded audio is available. The narration text is sample content; the button uses your device voice.',area:'Area',narration:'Narration',noNarration:'Narration is not available for this area.',back:'← Back to map',autoplay:'Starting narration…',pressPlay:'Tap the button below to hear the narration.',playingAudio:'Playing narration audio.',audioFallback:'Audio could not play; using your browser voice instead.',deviceReading:'Reading the narration with your device voice.',ttsUnsupported:'This browser does not support text-to-speech.',voice:'English',voiceMissing:'No {language} voice ({locale}) was found on this device.',availableVoices:' Available Chinese voices reported by the browser: {voices}.',noChineseVoice:' The browser did not report a matching Chinese voice.',installVoice:' Install a compatible voice in your phone settings and try again.',voiceUsing:'Using voice: {name} ({locale}).',voiceRequested:'Requesting {language} ({locale}); the browser did not report an exact matching voice.',voiceError:'Could not play the voice: {error}.',translationMissing:'Content is not translated into this language yet.',generatorTitle:'Create a tour QR code',generatorText:'Enter the access code provided by the tour manager. The QR code opens this narration page.',accessCode:'Access code',makeQr:'Create QR'},
+ 'zh-cn':{pageTitle:'旅游讲解',loading:'正在加载内容…',validQr:'二维码有效',qrNotFound:'二维码无效、已过期或行程不可用。',loadError:'无法加载行程内容，请重试。',tourName:'旅游行程',language:'语言',languageNames:['越南语','英语','简体中文','粤语（香港）','西班牙语'],welcome:'播放欢迎语',gpsTitle:'📍 模拟 GPS 地图',gpsHelp:'点击地图上的位置以模拟您的位置。如果该位置距离最近的讲解区域不超过 12 米，应用将打开该区域并播放讲解。地图数据来自 OpenStreetMap。',mapAria:'越南国寺景点模拟地图',loadingMap:'正在加载地图…',mapUnavailable:'无法从互联网加载地图，您仍可在下方选择区域。',mapUnavailableShort:'地图无法加载，您仍可在下方选择区域。',tapMap:'点击地图或绿色圆点以模拟位置。',simulatedPosition:'您的模拟位置',selected:'已选择：{name}（距离 {distance} 米）。',outsideRadius:'12 米范围内没有找到讲解区域。',nearest:'最近的区域是 {name}，距离 {distance} 米。',chooseArea:'选择区域以模拟 GPS',coordinateNote:'演示坐标为近似位置，可在实地测量后调整。',areas:'讲解区域',speak:'🔊 播放讲解',noAudio:'暂无录制音频。讲解文本为示例内容；上方按钮将使用设备语音。',area:'区域',narration:'讲解内容',noNarration:'此区域暂无讲解内容。',back:'← 返回地图',autoplay:'正在开始讲解…',pressPlay:'点击下方按钮收听讲解。',playingAudio:'正在播放讲解音频。',audioFallback:'音频无法播放，正在改用浏览器语音。',deviceReading:'正在使用设备语音播放讲解。',ttsUnsupported:'此浏览器不支持文字转语音。',voice:'普通话',voiceMissing:'此设备未找到{language}语音（{locale}）。',availableVoices:' 浏览器提供的中文语音：{voices}。',noChineseVoice:' 浏览器未提供匹配的中文语音。',installVoice:' 请在手机设置中安装合适的语音后重试。',voiceUsing:'正在使用语音：{name}（{locale}）。',voiceRequested:'正在请求使用{language}（{locale}）；浏览器未提供完全匹配的语音。',voiceError:'语音播放失败：{error}。',translationMissing:'此语言暂无翻译内容。',generatorTitle:'生成行程二维码',generatorText:'输入管理方提供的访问码。生成的二维码将直接打开讲解页面。',accessCode:'访问码',makeQr:'生成二维码'},
+ 'zh-hk':{pageTitle:'旅遊講解',loading:'正在載入內容…',validQr:'QR 碼有效',qrNotFound:'QR 碼無效、已過期或行程無法使用。',loadError:'無法載入行程內容，請重試。',tourName:'旅遊行程',language:'語言',languageNames:['越南語','英語','簡體中文','粵語（香港）','西班牙語'],welcome:'播放歡迎語',gpsTitle:'📍 模擬 GPS 地圖',gpsHelp:'點擊地圖上的位置以模擬您的位置。如果該位置距離最近的講解區域不超過 12 米，應用程式會打開該區域並播放講解。地圖資料來自 OpenStreetMap。',mapAria:'越南國寺景點模擬地圖',loadingMap:'正在載入地圖…',mapUnavailable:'無法從互聯網載入地圖，您仍可在下方選擇區域。',mapUnavailableShort:'地圖無法載入，您仍可在下方選擇區域。',tapMap:'點擊地圖或綠色圓點以模擬位置。',simulatedPosition:'您的模擬位置',selected:'已選擇：{name}（距離 {distance} 米）。',outsideRadius:'12 米範圍內找不到講解區域。',nearest:'最近的區域是 {name}，距離 {distance} 米。',chooseArea:'選擇區域以模擬 GPS',coordinateNote:'示範座標為近似位置，可在實地測量後調整。',areas:'講解區域',speak:'🔊 播放講解',noAudio:'暫無錄製音訊。講解文字為示範內容；上方按鈕會使用裝置語音。',area:'區域',narration:'講解內容',noNarration:'此區域暫無講解內容。',back:'← 返回地圖',autoplay:'正在開始講解…',pressPlay:'點擊下方按鈕收聽講解。',playingAudio:'正在播放講解音訊。',audioFallback:'音訊無法播放，正在改用瀏覽器語音。',deviceReading:'正在使用裝置語音播放講解。',ttsUnsupported:'此瀏覽器不支援文字轉語音。',voice:'粵語',voiceMissing:'此裝置找不到{language}語音（{locale}）。',availableVoices:' 瀏覽器提供的中文語音：{voices}。',noChineseVoice:' 瀏覽器未提供符合的中文語音。',installVoice:' 請在手機設定中安裝合適的語音後重試。',voiceUsing:'正在使用語音：{name}（{locale}）。',voiceRequested:'正在要求使用{language}（{locale}）；瀏覽器未提供完全符合的語音。',voiceError:'語音播放失敗：{error}。',translationMissing:'此語言暫無翻譯內容。',generatorTitle:'產生行程 QR 碼',generatorText:'輸入管理單位提供的存取碼。產生的 QR 碼會直接開啟講解頁面。',accessCode:'存取碼',makeQr:'產生 QR 碼'},
+ es:{pageTitle:'Guía turística',loading:'Cargando contenido…',validQr:'Código QR válido',qrNotFound:'El código QR no es válido, ha caducado o el recorrido no está disponible.',loadError:'No se pudo cargar el recorrido. Inténtalo de nuevo.',tourName:'Recorrido',language:'Idioma',languageNames:['Vietnamita','Inglés','Chino simplificado','Cantonés (Hong Kong)','Español'],welcome:'Reproducir bienvenida',gpsTitle:'📍 Mapa GPS simulado',gpsHelp:'Toca un punto del mapa para simular tu ubicación. Si está a menos de 12 m del área narrada más cercana, la aplicación abrirá esa área y reproducirá la narración. El mapa utiliza OpenStreetMap.',mapAria:'Mapa simulado de Vietnam Quoc Tu',loadingMap:'Cargando mapa…',mapUnavailable:'No se pudo cargar el mapa desde Internet. Aún puedes elegir un área abajo.',mapUnavailableShort:'No se pudo cargar el mapa. Aún puedes elegir un área abajo.',tapMap:'Toca el mapa o un punto verde para simular tu ubicación.',simulatedPosition:'Tu ubicación simulada',selected:'Seleccionado: {name} (a {distance} m).',outsideRadius:'No se encontró un área narrada en un radio de 12 m.',nearest:'El área más cercana es {name}, a {distance} m.',chooseArea:'Elige un área para simular el GPS',coordinateNote:'Las coordenadas de demostración son aproximadas y pueden ajustarse tras medirlas.',areas:'Áreas narradas',speak:'🔊 Escuchar narración',noAudio:'No hay audio grabado. El texto es de demostración; el botón utiliza la voz del dispositivo.',area:'Área',narration:'Narración',noNarration:'No hay narración disponible para esta área.',back:'← Volver al mapa',autoplay:'Iniciando narración…',pressPlay:'Pulsa el botón de abajo para escuchar la narración.',playingAudio:'Reproduciendo audio de la narración.',audioFallback:'No se pudo reproducir el audio; se usará la voz del navegador.',deviceReading:'Leyendo la narración con la voz del dispositivo.',ttsUnsupported:'Este navegador no admite la lectura de texto.',voice:'español',voiceMissing:'No se encontró una voz de {language} ({locale}) en este dispositivo.',availableVoices:' Voces chinas indicadas por el navegador: {voices}.',noChineseVoice:' El navegador no indicó una voz china compatible.',installVoice:' Instala una voz compatible en los ajustes del teléfono e inténtalo de nuevo.',voiceUsing:'Usando la voz: {name} ({locale}).',voiceRequested:'Solicitando {language} ({locale}); el navegador no indicó una voz exacta.',voiceError:'No se pudo reproducir la voz: {error}.',translationMissing:'El contenido aún no está traducido a este idioma.',generatorTitle:'Crear código QR del recorrido',generatorText:'Introduce el código de acceso proporcionado por la administración. El QR abrirá esta página de narración.',accessCode:'Código de acceso',makeQr:'Crear QR'}
+};
+function ui(lang,key,values={}){
+ const keyLang=String(lang||'vi').toLowerCase();
+ const result=(uiStrings[keyLang]||uiStrings.vi)[key]??uiStrings.vi[key]??key;
+ if(typeof result!=='string')return result;
+ return result.replace(/\{(\w+)\}/g,(_,name)=>String(values[name]??''));
+}
+// Keep language selector labels fixed in English for easier scanning.
+function languageNameList(){return ['Vietnamese','English','Chinese (Simplified)','Cantonese (Hong Kong)','Spanish']}
 let cachedTourCode = null;
 let cachedTourData = null;
 let guestSession = null;
@@ -110,18 +125,21 @@ function setVoiceStatus(message) {
 function speak(text, lang) {
  if (!text) return;
  if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
-  setVoiceStatus('Trình duyệt này không hỗ trợ đọc văn bản.');
+  setVoiceStatus(ui(lang,'ttsUnsupported'));
   return;
  }
  const config = speechVoiceConfig[lang] || speechVoiceConfig.vi;
+ const voiceLanguage=ui(lang,'voice');
  const voice = findSpeechVoice(lang);
  const isChineseVariant = lang === 'zh-CN' || lang === 'zh-HK';
  if (!voice && isChineseVariant) {
   const availableChinese = cachedSpeechVoices
    .filter(v => /^(zh|cmn|yue)(-|$)/i.test(normalizeVoiceLocale(v.lang)))
    .map(v => `${v.name} (${v.lang})`);
-  const list = availableChinese.length ? ` Giọng tiếng Trung trình duyệt báo có: ${availableChinese.join(', ')}.` : ' Trình duyệt chưa báo giọng tiếng Trung tương ứng.';
-  setVoiceStatus(`Không tìm thấy giọng ${config.label} (${config.locale}) trên thiết bị.${list} Hãy cài giọng phù hợp trong cài đặt điện thoại rồi thử lại; ứng dụng sẽ không tự thay giọng phổ thông bằng giọng Hồng Kông hoặc ngược lại.`);
+  const list = availableChinese.length
+   ? ui(lang,'availableVoices',{voices:availableChinese.join(', ')})
+   : ui(lang,'noChineseVoice');
+  setVoiceStatus(ui(lang,'voiceMissing',{language:voiceLanguage,locale:config.locale})+list+ui(lang,'installVoice'));
   return;
  }
  window.speechSynthesis.cancel();
@@ -129,9 +147,9 @@ function speak(text, lang) {
  utterance.lang = config.locale;
  if (voice) utterance.voice = voice;
  utterance.onstart = () => setVoiceStatus(voice
-  ? `Đang dùng giọng: ${voice.name} (${voice.lang}).`
-  : `Đang yêu cầu trình duyệt đọc bằng ${config.label} (${config.locale}); trình duyệt không công bố giọng khớp chính xác.`);
- utterance.onerror = event => setVoiceStatus(`Không phát được giọng đọc: ${event.error || 'lỗi đọc văn bản'}.`);
+  ? ui(lang,'voiceUsing',{name:voice.name,locale:voice.lang})
+  : ui(lang,'voiceRequested',{language:voiceLanguage,locale:config.locale}));
+ utterance.onerror = event => setVoiceStatus(ui(lang,'voiceError',{error:event.error||'speech error'}));
  window.speechSynthesis.speak(utterance);
 }
 
@@ -142,46 +160,50 @@ async function loadTour(code,lang='vi'){
   // Reuse the first response when changing language. This is required for SingleUse QR codes,
   // because their first successful API request deactivates the code.
   if(cachedTourCode===code && cachedTourData){renderTour(cachedTourData,code,lang);return;}
-  status.textContent='Đang tải nội dung…';
+  status.textContent=ui(lang,'loading');
   let deviceId=localStorage.getItem('stg-guest-device-id');
   if(!deviceId){deviceId=window.crypto?.randomUUID?window.crypto.randomUUID():`guest-${Date.now()}-${Math.random().toString(36).slice(2)}`;localStorage.setItem('stg-guest-device-id',deviceId);}
   const response=await fetch(`/api/public/tours/qr/${encodeURIComponent(code)}?language=${encodeURIComponent(lang)}&deviceId=${encodeURIComponent(deviceId)}`);
   const data=await response.json();
-  if(!response.ok)throw Error(data.message||'Không tải được tour.');
+  if(!response.ok)throw Error(response.status===404?ui(lang,'qrNotFound'):ui(lang,'loadError'));
   startGuestTracking(data.sessionId,deviceId);
   cachedTourCode=code;
   cachedTourData=data;
   renderTour(data,code,lang);
- }catch(e){status.textContent=e.message;content.innerHTML='';}
+ }catch(e){status.textContent=e.message||ui(lang,'loadError');content.innerHTML='';}
 }
 
 function renderTour(data,code,lang){
  const section=document.querySelector('#tour'), status=document.querySelector('#status'), content=document.querySelector('#content');
  section.classList.remove('hidden');
+ document.documentElement.lang=lang;
+ document.title=ui(lang,'pageTitle');
+ document.querySelector('h1').textContent=`🎧 ${ui(lang,'pageTitle')}`;
  const t=data.tour;
  const languageKey=String(lang).toLowerCase();
  const tourTranslations=t.translations||[];
  const tourFallback=tourTranslations.find(x=>String(x.languageCode).toLowerCase()==='vi');
- const tourTranslation=tourTranslations.find(x=>String(x.languageCode).toLowerCase()===languageKey)||tourFallback;
- const tourName=tourTranslation?.name||t.name;
- const tourDescription=tourTranslation?.description??t.description??'';
- const welcomeMessage=tourTranslation?.welcomeMessage??t.welcomeMessage??'';
+ const selectedTourTranslation=tourTranslations.find(x=>String(x.languageCode).toLowerCase()===languageKey);
+ const tourTranslation=selectedTourTranslation||(languageKey==='vi'?tourFallback:null);
+ const tourName=tourTranslation?.name||(languageKey==='vi'?t.name:ui(lang,'tourName'));
+ const tourDescription=tourTranslation?.description??(languageKey==='vi'?(t.description??''):ui(lang,'translationMissing'));
+ const welcomeMessage=tourTranslation?.welcomeMessage??(languageKey==='vi'?(t.welcomeMessage??''):ui(lang,'translationMissing'));
  const locations=(t.locations||[]).map(l=>{
   const allTranslations=l.translations||[];
   const fallback=allTranslations.find(x=>String(x.languageCode).toLowerCase()==='vi');
-  const translation=allTranslations.find(x=>String(x.languageCode).toLowerCase()===languageKey)||fallback;
+  const translation=allTranslations.find(x=>String(x.languageCode).toLowerCase()===languageKey)||(languageKey==='vi'?fallback:null);
   return {...l,
-   name:translation?.title||l.name,
-   description:translation?.description??l.description??'',
-   narrationText:translation?.narrationText??l.narrationText??'',
-   audioUrl:translation?.audioUrl??l.audioUrl??''
+   name:translation?.title||(languageKey==='vi'?l.name:`${ui(lang,'area')} ${l.displayOrder}`),
+   description:translation?.description??(languageKey==='vi'?(l.description??''):ui(lang,'translationMissing')),
+   narrationText:translation?.narrationText??(languageKey==='vi'?(l.narrationText??''):ui(lang,'noNarration')),
+   audioUrl:translation?.audioUrl??(languageKey==='vi'?(l.audioUrl??''):'')
   };
  });
- status.textContent='Mã QR hợp lệ';
- content.innerHTML=`<h2>${escapeHtml(tourName)}</h2><p>${escapeHtml(tourDescription)}</p><p>${escapeHtml(welcomeMessage)}</p><label>Ngôn ngữ</label><select id="language">${languages.map(x=>`<option value="${x}" ${x===lang?'selected':''}>${x}</option>`).join('')}</select><button id="welcome">🔊 Nghe lời chào</button><p id="voice-status" class="muted" role="status" aria-live="polite"></p><section class="location-map"><h2>📍 Mô phỏng GPS trên bản đồ</h2><p class="map-help">Chạm vào một điểm trên bản đồ để mô phỏng vị trí của bạn. Nếu điểm đó cách địa điểm thuyết minh gần nhất không quá 12 m, app sẽ đọc nội dung tương ứng. Bản đồ dùng OpenStreetMap.</p><div id="sim-map" aria-label="Bản đồ mô phỏng vị trí tại Việt Nam Quốc Tự"></div><p id="map-status" class="map-status muted" role="status" aria-live="polite">Đang tải bản đồ…</p></section><h2>Các khu vực thuyết minh</h2><div id="locations"></div>`;
+ status.textContent=ui(lang,'validQr');
+ content.innerHTML=`<h2>${escapeHtml(tourName)}</h2><p>${escapeHtml(tourDescription)}</p><p>${escapeHtml(welcomeMessage)}</p><label>${ui(lang,'language')}</label><select id="language">${languages.map((x,i)=>`<option value="${x}" ${x===lang?'selected':''}>${languageNameList(lang)[i]}</option>`).join('')}</select><button id="welcome">🔊 ${ui(lang,'welcome')}</button><p id="voice-status" class="muted" role="status" aria-live="polite"></p><section class="location-map"><h2>${ui(lang,'gpsTitle')}</h2><p class="map-help">${ui(lang,'gpsHelp')}</p><div id="sim-map" aria-label="${ui(lang,'mapAria')}"></div><p id="map-status" class="map-status muted" role="status" aria-live="polite">${ui(lang,'loadingMap')}</p></section><h2>${ui(lang,'areas')}</h2><div id="locations"></div>`;
  document.querySelector('#welcome').onclick=()=>speak(welcomeMessage,lang);
  document.querySelector('#language').onchange=e=>loadTour(code,e.target.value);
- document.querySelector('#locations').innerHTML=locations.map(l=>`<article class="location"><h3>${escapeHtml(l.displayOrder+'. '+l.name)}</h3><p>${escapeHtml(l.description)}</p><button class="secondary narration">🔊 Nghe thuyết minh</button>${l.audioUrl?`<audio controls preload="none" src="${escapeHtml(l.audioUrl)}"></audio>`:`<p class="muted">Chưa có file audio thu sẵn. Nội dung lời đọc hiện là dữ liệu mẫu; nút trên sử dụng giọng đọc của thiết bị.</p>`}</article>`).join('');
+ document.querySelector('#locations').innerHTML=locations.map(l=>`<article class="location"><h3>${escapeHtml(l.displayOrder+'. '+l.name)}</h3><p>${escapeHtml(l.description)}</p><button class="secondary narration">${ui(lang,'speak')}</button>${l.audioUrl?`<audio controls preload="none" src="${escapeHtml(l.audioUrl)}"></audio>`:`<p class="muted">${ui(lang,'noAudio')}</p>`}</article>`).join('');
  document.querySelectorAll('.narration').forEach((b,i)=>b.onclick=()=>speak(locations[i].narrationText,lang));
  renderSimulationMap(locations,lang,code);
  const requestedLocationId=new URLSearchParams(location.search).get('location');
@@ -205,25 +227,25 @@ function renderSimulationMap(locations,lang,code){
   const lat=Number(item.latitude),lng=Number(item.longitude);
   return {...item,latitude:Number.isFinite(lat)&&lat!==0?lat:fallback[0],longitude:Number.isFinite(lng)&&lng!==0?lng:fallback[1],triggerRadiusMeters:Number(item.triggerRadiusMeters)||12};
  });
- if(!window.L){status.textContent='Không tải được nền bản đồ từ Internet. Bạn vẫn có thể chọn khu vực bên dưới.';renderMapFallback(usable,lang,code);return;}
+ if(!window.L){status.textContent=ui(lang,'mapUnavailable');renderMapFallback(usable,lang,code);return;}
  if(simulationMap){simulationMap.remove();simulationMap=null;simulationMarker=null;}
  const center=[10.7718218,106.6734327];
  simulationMap=L.map('sim-map').setView(center,19);
  let loadedTiles=0;
  const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:21,attribution:'&copy; OpenStreetMap contributors'}).addTo(simulationMap);
  tiles.on('tileload',()=>loadedTiles++);
- setTimeout(()=>{if(loadedTiles===0&&document.querySelector('#sim-map')){status.textContent='Không tải được nền bản đồ. Bạn vẫn có thể chọn khu vực bên dưới.';renderMapFallback(usable,lang,code);}},6000);
+ setTimeout(()=>{if(loadedTiles===0&&document.querySelector('#sim-map')){status.textContent=ui(lang,'mapUnavailableShort');renderMapFallback(usable,lang,code);}},6000);
  const selectPosition=position=>{
   const chosen={latitude:position.lat,longitude:position.lng};
   if(simulationMarker)simulationMap.removeLayer(simulationMarker);
-  simulationMarker=L.marker([position.lat,position.lng]).addTo(simulationMap).bindPopup('Vị trí mô phỏng của bạn').openPopup();
+  simulationMarker=L.marker([position.lat,position.lng]).addTo(simulationMap).bindPopup(ui(lang,'simulatedPosition')).openPopup();
   const nearest=usable.map(location=>({location,distance:distanceMeters(chosen,{latitude:Number(location.latitude),longitude:Number(location.longitude)})})).sort((a,b)=>a.distance-b.distance)[0];
   const radius=Math.min(Number(nearest.location.triggerRadiusMeters)||12,12);
   if(nearest.distance<=radius){
-   status.textContent=`Đã chọn: ${nearest.location.name} (cách ${Math.round(nearest.distance)} m).`;
+   status.textContent=ui(lang,'selected',{name:nearest.location.name,distance:Math.round(nearest.distance)});
    openLocationDetail(nearest.location,lang,code,true);
   }else{
-   status.textContent=`Chưa có điểm thuyết minh trong bán kính 12 m. Điểm gần nhất là ${nearest.location.name}, cách ${Math.round(nearest.distance)} m.`;
+   status.textContent=`${ui(lang,'outsideRadius')} ${ui(lang,'nearest',{name:nearest.location.name,distance:Math.round(nearest.distance)})}`;
   }
  };
  usable.forEach(location=>{
@@ -235,7 +257,7 @@ function renderSimulationMap(locations,lang,code){
   marker.on('click',()=>selectPosition({lat:point[0],lng:point[1]}));
  });
  simulationMap.on('click',event=>selectPosition(event.latlng));
- status.textContent='Chạm vào bản đồ hoặc một chấm xanh để mô phỏng vị trí.';
+ status.textContent=ui(lang,'tapMap');
  setTimeout(()=>simulationMap?.invalidateSize(),100);
 }
 
@@ -243,7 +265,7 @@ function renderMapFallback(locations,lang,code){
  const mapElement=document.querySelector('#sim-map');
  if(!mapElement)return;
  if(simulationMap){simulationMap.remove();simulationMap=null;simulationMarker=null;}
- mapElement.innerHTML=`<div class="map-fallback"><strong>Chọn khu vực để mô phỏng GPS</strong><div class="map-fallback-list">${locations.map((item,index)=>`<button type="button" data-location-index="${index}">📍 ${escapeHtml(item.name)}</button>`).join('')}</div><p class="muted small">Tọa độ demo gần đúng; có thể tinh chỉnh khi có tọa độ khảo sát.</p></div>`;
+ mapElement.innerHTML=`<div class="map-fallback"><strong>${ui(lang,'chooseArea')}</strong><div class="map-fallback-list">${locations.map((item,index)=>`<button type="button" data-location-index="${index}">📍 ${escapeHtml(item.name)}</button>`).join('')}</div><p class="muted small">${ui(lang,'coordinateNote')}</p></div>`;
  mapElement.querySelectorAll('[data-location-index]').forEach(button=>button.onclick=()=>openLocationDetail(locations[Number(button.dataset.locationIndex)],lang,code,true));
 }
 
@@ -256,8 +278,8 @@ function openLocationDetail(locationData,lang,code,autoPlay){
 
 function showLocationDetail(locationData,lang,code,autoPlay){
  const content=document.querySelector('#content');
- const narration=locationData.narrationText||locationData.description||'Chưa có nội dung thuyết minh cho khu vực này.';
- content.innerHTML=`<button id="back-to-map" class="secondary">← Quay lại bản đồ</button><article class="card"><p class="muted">Khu vực ${escapeHtml(String(locationData.displayOrder||''))}</p><h2>${escapeHtml(locationData.name)}</h2>${locationData.imageUrl?`<img src="${escapeHtml(locationData.imageUrl)}" alt="${escapeHtml(locationData.name)}" style="max-width:100%;border-radius:12px">`:''}<p>${escapeHtml(locationData.description)}</p><h3>Nội dung thuyết minh</h3><p>${escapeHtml(narration)}</p>${locationData.audioUrl?`<audio id="location-audio" controls preload="auto" src="${escapeHtml(locationData.audioUrl)}"></audio>`:''}<p id="detail-voice-status" class="muted" role="status" aria-live="polite">${autoPlay?'Đang bắt đầu thuyết minh…':'Nhấn nút bên dưới để nghe thuyết minh.'}</p><button id="replay-narration">🔊 Nghe thuyết minh</button></article>`;
+ const narration=locationData.narrationText||ui(lang,'noNarration');
+ content.innerHTML=`<button id="back-to-map" class="secondary">${ui(lang,'back')}</button><article class="card"><p class="muted">${ui(lang,'area')} ${escapeHtml(String(locationData.displayOrder||''))}</p><h2>${escapeHtml(locationData.name)}</h2>${locationData.imageUrl?`<img src="${escapeHtml(locationData.imageUrl)}" alt="${escapeHtml(locationData.name)}" style="max-width:100%;border-radius:12px">`:''}<p>${escapeHtml(locationData.description)}</p><h3>${ui(lang,'narration')}</h3><p>${escapeHtml(narration)}</p>${locationData.audioUrl?`<audio id="location-audio" controls preload="auto" src="${escapeHtml(locationData.audioUrl)}"></audio>`:''}<p id="detail-voice-status" class="muted" role="status" aria-live="polite">${autoPlay?ui(lang,'autoplay'):ui(lang,'pressPlay')}</p><button id="replay-narration">${ui(lang,'speak')}</button></article>`;
  document.querySelector('#back-to-map').onclick=()=>{
   window.speechSynthesis?.cancel();
   const backParams=new URLSearchParams({code,language:lang});
@@ -268,10 +290,10 @@ function showLocationDetail(locationData,lang,code,autoPlay){
   const audio=document.querySelector('#location-audio');
   const status=document.querySelector('#detail-voice-status');
   if(audio){
-   audio.play().then(()=>{status.textContent='Đang phát audio thuyết minh.';}).catch(()=>{status.textContent='Thiết bị chưa phát được audio; đang dùng giọng đọc của trình duyệt.';speak(narration,lang);});
+   audio.play().then(()=>{status.textContent=ui(lang,'playingAudio');}).catch(()=>{status.textContent=ui(lang,'audioFallback');speak(narration,lang);});
   }else{
    speak(narration,lang);
-   status.textContent='Đang đọc thuyết minh bằng giọng của thiết bị.';
+   status.textContent=ui(lang,'deviceReading');
   }
  };
  document.querySelector('#replay-narration').onclick=playNarration;

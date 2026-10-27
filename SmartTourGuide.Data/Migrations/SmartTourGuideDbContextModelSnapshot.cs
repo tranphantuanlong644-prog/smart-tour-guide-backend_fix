@@ -102,6 +102,28 @@ namespace SmartTourGuide.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartTourGuide.Data.Entities.DashboardStatisticsReset", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedNever()
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ResetAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ScanCountAtReset")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DashboardStatisticsResets", (string)null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DashboardStatisticsResets_Singleton", "[Id] = 1");
+
+                            t.HasCheckConstraint("CK_DashboardStatisticsResets_ScanCount", "[ScanCountAtReset] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("SmartTourGuide.Data.Entities.GuestIdentity", b =>
                 {
                     b.Property<Guid>("Id")

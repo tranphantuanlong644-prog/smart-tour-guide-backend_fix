@@ -41,6 +41,10 @@ public sealed class SmartTourGuideDbContext
     public DbSet<TourVisit> TourVisits =>
         Set<TourVisit>();
 
+    public DbSet<DashboardStatisticsReset>
+        DashboardStatisticsResets =>
+        Set<DashboardStatisticsReset>();
+
     public DbSet<AudioPlaybackProgress>
         AudioPlaybackProgresses =>
         Set<AudioPlaybackProgress>();
