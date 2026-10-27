@@ -1,7 +1,9 @@
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SmartTourGuide.API.Middleware;
@@ -169,7 +171,43 @@ builder.Services
             };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminDashboardAccess", policy => policy.RequireAssertion(context =>
+    {
+        // A real Administrator can read the dashboard in any environment.
+        if (context.User.IsInRole(nameof(SmartTourGuide.Shared.Enums.UserRole.Administrator)))
+        {
+            return true;
+        }
+
+        // The no-login demo is permitted only in Development and only from this machine.
+        if (!builder.Environment.IsDevelopment())
+        {
+            return false;
+        }
+
+        var httpContext = context.Resource switch
+        {
+            HttpContext currentContext => currentContext,
+            AuthorizationFilterContext filterContext => filterContext.HttpContext,
+            _ => null
+        };
+
+        if (httpContext is null)
+        {
+            return false;
+        }
+
+        var remoteIp = httpContext.Connection.RemoteIpAddress;
+        if (remoteIp?.IsIPv4MappedToIPv6 == true)
+        {
+            remoteIp = remoteIp.MapToIPv4();
+        }
+
+        return remoteIp is not null && IPAddress.IsLoopback(remoteIp);
+    }));
+});
 
 // ========================================
 // Build application

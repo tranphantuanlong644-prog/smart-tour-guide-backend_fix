@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#173c35">
-  <title>Quản trị Smart Tour Guide</title>
+  <title>Smart Tour Guide · Dashboard</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous" defer></script>
   <style>
     :root{font-family:system-ui,sans-serif;color:#18332d;background:#f4f6f2}body{margin:0}.wrap{max-width:1000px;margin:24px auto;padding:16px}.top,.card{background:#fff;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 5px 24px #18332d12}.top{background:#173c35;color:#fff}.top p{color:#d7e8df}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.stat{background:#edf4ef;border-radius:12px;padding:14px}.stat strong{display:block;font-size:1.7rem}input,button{font:inherit;padding:10px;border-radius:9px;border:1px solid #cbd5ce}button{background:#174f41;color:#fff;border:0;cursor:pointer}button:disabled{opacity:.6;cursor:wait}label{display:block;margin:10px 0 4px}.muted{color:#60726b}.notice{background:#fff5d9;padding:12px;border-radius:10px}.status{min-height:1.4em}.small{font-size:.9rem}.qr-layout{display:flex;align-items:center;gap:24px;flex-wrap:wrap}.qr-box{background:#fff;padding:10px;min-width:220px;min-height:220px;display:grid;place-items:center;border:1px solid #e1e7e2;border-radius:12px}.qr-box canvas,.qr-box img{max-width:100%;height:auto}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:560px}th,td{text-align:left;padding:10px;border-bottom:1px solid #e4e9e5}.login-form input{display:block;width:min(100%,420px);box-sizing:border-box}.admin-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}[hidden]{display:none!important}@media(max-width:600px){.wrap{padding:10px}.card{padding:15px}}
@@ -12,20 +12,10 @@
 </head>
 <body>
 <main class="wrap">
-  <header class="top"><h1>Quản trị Smart Tour Guide</h1><p>QR cố định cho tour Việt Nam Quốc Tự và thống kê lượt khách quét.</p><p class="small">Đăng nhập bằng tài khoản đã được cấp vai trò Administrator.</p></header>
-  <p id="status" class="status muted" role="status" aria-live="polite">Đăng nhập để tiếp tục.</p>
-  <section id="loginCard" class="card">
-    <h2>Đăng nhập quản trị</h2>
-    <form id="loginForm" class="login-form">
-      <label for="email">Email</label>
-      <input id="email" type="email" autocomplete="username" required>
-      <label for="password">Mật khẩu</label>
-      <input id="password" type="password" autocomplete="current-password" required>
-      <p><button id="loginButton" type="submit">Đăng nhập</button></p>
-    </form>
-  </section>
-  <div id="adminContent" hidden>
-  <div class="admin-actions"><span id="adminUser" class="small"></span><button id="logout" type="button">Đăng xuất</button></div>
+  <header class="top"><h1>Smart Tour Guide · Tổng quan</h1><p>Thống kê lượt quét QR và phiên khách tham quan Việt Nam Quốc Tự.</p><p class="small">Dashboard demo chỉ đọc, mở trực tiếp trên máy chạy backend ở chế độ Development.</p></header>
+  <p id="status" class="status muted" role="status" aria-live="polite">Đang tải dữ liệu tổng quan…</p>
+  <div id="adminContent">
+  <div class="admin-actions"><span id="adminUser" class="small">Bảng điều khiển demo</span></div>
   <section class="card"><h2>Tổng quan</h2><div id="stats" class="stats"></div></section>
   <section class="card">
     <h2>Mã QR cố định</h2>
@@ -44,17 +34,42 @@ const fixedCode='VNTQ-DEMO-2026';
 const date=s=>s?new Date(s).toLocaleString('vi-VN'):'—';
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function message(text,warning=false){$('#status').textContent=text;$('#status').className=warning?'status notice':'status muted'}
-const tokenKey='smart-tour-guide-admin-token';
-let token=sessionStorage.getItem(tokenKey);
 let refreshTimer=null;
-function showAdmin(user){$('#loginCard').hidden=true;$('#adminContent').hidden=false;$('#adminUser').textContent='Đã đăng nhập: '+user.displayName+' ('+user.email+')';message('Đã xác thực tài khoản Administrator.')}
-function logout(statusText='Đăng nhập để tiếp tục.',warning=false){token=null;sessionStorage.removeItem(tokenKey);if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null}$('#loginCard').hidden=false;$('#adminContent').hidden=true;message(statusText,warning)}
-async function api(path){const response=await fetch('/api/admin'+path,{headers:token?{Authorization:'Bearer '+token}:{}});if(!response.ok){const body=await response.json().catch(()=>null);if(response.status===401||response.status===403)logout('Phiên đăng nhập hết hạn hoặc tài khoản không có quyền quản trị.',true);throw Error(body?.error?.message||body?.message||'HTTP '+response.status)}return response.json()}
-async function initialize(){if(!token){logout();return}try{const response=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}});if(!response.ok)throw Error('Phiên đăng nhập không còn hợp lệ.');const user=await response.json();if(user.role!=='Administrator')throw Error('Tài khoản không có quyền quản trị.');showAdmin(user);await refresh();if(token)refreshTimer=setInterval(refresh,15000)}catch(error){logout(error.message,true)}}
-$('#loginForm').addEventListener('submit',async event=>{event.preventDefault();$('#loginButton').disabled=true;try{const response=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('#email').value.trim(),password:$('#password').value})});const body=await response.json().catch(()=>null);if(!response.ok)throw Error(body?.error?.message||body?.message||'Đăng nhập thất bại.');if(body?.user?.role!=='Administrator')throw Error('Tài khoản này chưa được cấp vai trò Administrator.');if(!body.accessToken)throw Error('Không nhận được access token.');token=body.accessToken;sessionStorage.setItem(tokenKey,token);$('#password').value='';showAdmin(body.user);await refresh();if(token&&!refreshTimer)refreshTimer=setInterval(refresh,15000)}catch(error){message(error.message,true)}finally{$('#loginButton').disabled=false}});
-$('#logout').addEventListener('click',()=>logout('Đã đăng xuất.'));
-function renderQr(){const entered=$('#visitorBase').value.trim();$('#qrimage').innerHTML='';$('#qrurl').textContent='';$('#download').disabled=true;if(!entered){$('#qrimage').textContent='Nhập địa chỉ IP ở trên để hiện QR';return}let base;try{base=new URL(entered)}catch{$('#qrimage').textContent='Địa chỉ chưa đúng. Ví dụ: http://10.182.27.19:5011';return}if(!['http:','https:'].includes(base.protocol)){$('#qrimage').textContent='Địa chỉ cần bắt đầu bằng http:// hoặc https://';return}if(!window.QRCode){$('#qrimage').textContent='Không tải được công cụ tạo QR. Hãy kiểm tra Internet rồi tải lại trang.';return}const url=`${base.origin}/tour/${fixedCode}`;new QRCode($('#qrimage'),{text:url,width:220,height:220});$('#qrurl').textContent=url;$('#download').disabled=false}
-async function refresh(){try{message('Đang tải thống kê…');const [overview,sessions]=await Promise.all([api('/overview'),api('/sessions')]);$('#stats').innerHTML=[['Tour đang mở',overview.tours],['Tổng lượt quét',overview.scans],['Tổng khách',overview.guestSessions],['Người đang sử dụng',overview.activeSessions]].map(([name,value])=>`<div class="stat"><span>${name}</span><strong>${value}</strong></div>`).join('');$('#sessions').innerHTML=sessions.map(s=>`<tr><td>${escapeHtml(s.tourName)}</td><td>${escapeHtml(s.languageCode)}</td><td>${date(s.startedAt)}</td><td>${date(s.lastActivityAt)}</td><td>${escapeHtml(String(s.status))}</td></tr>`).join('')||'<tr><td colspan="5">Chưa ghi nhận phiên khách nào</td></tr>';message('Đã kết nối với backend.')}catch(error){message('Không tải được dữ liệu: '+error.message,true)}}
+async function api(path){
+  const response=await fetch('/api/admin'+path,{cache:'no-store'});
+  if(!response.ok){
+    const body=await response.json().catch(()=>null);
+    throw Error(body?.error?.message||body?.message||`HTTP ${response.status}`);
+  }
+  return response.json();
+}
+function renderQr(){
+  const entered=$('#visitorBase').value.trim();
+  $('#qrimage').innerHTML='';$('#qrurl').textContent='';$('#download').disabled=true;
+  if(!entered){$('#qrimage').textContent='Nhập địa chỉ IP ở trên để hiện QR';return}
+  let base;
+  try{base=new URL(entered)}catch{$('#qrimage').textContent='Địa chỉ chưa đúng. Ví dụ: http://10.182.27.19:5011';return}
+  if(!['http:','https:'].includes(base.protocol)){$('#qrimage').textContent='Địa chỉ cần bắt đầu bằng http:// hoặc https://';return}
+  if(!window.QRCode){$('#qrimage').textContent='Không tải được công cụ tạo QR. Hãy kiểm tra Internet rồi tải lại trang.';return}
+  const url=`${base.origin}/tour/${fixedCode}`;
+  new QRCode($('#qrimage'),{text:url,width:220,height:220});
+  $('#qrurl').textContent=url;$('#download').disabled=false;
+}
+async function refresh(){
+  try{
+    message('Đang tải thống kê…');
+    const [overview,sessions]=await Promise.all([api('/overview'),api('/sessions')]);
+    $('#stats').innerHTML=[['Tour đang mở',overview.tours],['Tổng lượt quét',overview.scans],['Tổng khách',overview.guestSessions],['Người đang sử dụng',overview.activeSessions]].map(([name,value])=>`<div class="stat"><span>${name}</span><strong>${value}</strong></div>`).join('');
+    $('#sessions').innerHTML=sessions.map(s=>`<tr><td>${escapeHtml(s.tourName)}</td><td>${escapeHtml(s.languageCode)}</td><td>${date(s.startedAt)}</td><td>${date(s.lastActivityAt)}</td><td>${escapeHtml(String(s.status))}</td></tr>`).join('')||'<tr><td colspan="5">Chưa ghi nhận phiên khách nào</td></tr>';
+    message('Đã tải dữ liệu Dashboard. Tự làm mới mỗi 15 giây.');
+  }catch(error){
+    message('Không tải được Dashboard. Hãy mở http://localhost:5011/admin/ và bảo đảm backend đang chạy ở Development. Chi tiết: '+error.message,true);
+  }
+}
+async function initialize(){
+  await refresh();
+  if(!refreshTimer)refreshTimer=setInterval(refresh,15000);
+}
 $('#visitorBase').addEventListener('input',renderQr);
 window.addEventListener('load',renderQr);
 $('#download').onclick=()=>{const canvas=$('#qrimage canvas');if(!canvas)return;const link=document.createElement('a');link.download='smart-tour-guide-qr-co-dinh.png';link.href=canvas.toDataURL('image/png');link.click()};
