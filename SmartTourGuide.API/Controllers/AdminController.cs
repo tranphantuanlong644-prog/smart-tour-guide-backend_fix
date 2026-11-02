@@ -9,9 +9,6 @@ using SmartTourGuide.Shared.Enums;
 
 namespace SmartTourGuide.API.Controllers;
 
-/// <summary>
-/// Administration endpoints for users with the Administrator role.
-/// </summary>
 [ApiController]
 [Authorize(Roles = nameof(UserRole.Administrator))]
 [Route("api/admin")]
@@ -24,38 +21,44 @@ public sealed class AdminController : ControllerBase
     [HttpGet("tours")]
     public async Task<IActionResult> GetTours(CancellationToken cancellationToken)
     {
-        var tours = await _db.Tours.AsNoTracking()
-            .OrderBy(x => x.DefaultName)
-            .Select(x => new { x.Id, x.Code, x.DefaultName, x.IsActive, x.Address })
+        var codes = await _db.TourQrCodes.AsNoTracking()
+            .GroupBy(x => x.TourId)
+            .Select(group => group.OrderBy(x => x.CreatedAt).First())
+            .OrderBy(x => x.TourName)
+            .Select(x => new { x.TourId, x.TourCode, x.TourName, x.IsActive, x.Address })
             .ToListAsync(cancellationToken);
-        return Ok(tours);
+        return Ok(codes.Select(x => new { Id = x.TourId, Code = x.TourCode, DefaultName = x.TourName, x.IsActive, x.Address }));
     }
 
     [HttpGet("tours/{id:guid}")]
     public async Task<IActionResult> GetTour(Guid id, CancellationToken cancellationToken)
     {
-        var tour = await _db.Tours.AsNoTracking()
-            .Where(x => x.Id == id)
+        var qr = await _db.TourQrCodes.AsNoTracking()
+            .Where(x => x.TourId == id)
+            .OrderBy(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (qr is null) return NotFound();
+
+        var locations = await _db.TourLocations.AsNoTracking()
+            .Where(x => x.TourId == id)
+            .OrderBy(x => x.DisplayOrder)
             .Select(x => new
             {
-                x.Id, x.Code, x.DefaultName, x.Address, x.CoverImageUrl,
-                x.CenterLatitude, x.CenterLongitude, x.IsActive,
+                x.Id, x.Code, x.DefaultName, x.Latitude, x.Longitude,
+                x.TriggerRadiusMeters, x.DisplayOrder, x.ImageUrl, x.IsActive,
                 Translations = x.Translations.Select(t => new
                 {
-                    t.LanguageCode, t.Name, t.Description, t.WelcomeMessage
-                }),
-                Locations = x.Locations.OrderBy(l => l.DisplayOrder).Select(l => new
-                {
-                    l.Id, l.Code, l.DefaultName, l.Latitude, l.Longitude,
-                    l.TriggerRadiusMeters, l.DisplayOrder, l.ImageUrl, l.IsActive,
-                    Translations = l.Translations.Select(t => new
-                    {
-                        t.LanguageCode, t.Title, t.Description, t.NarrationText,
-                        t.AudioUrl, t.DurationSeconds, t.NarratorName
-                    })
+                    t.LanguageCode, t.Title, t.Description, t.NarrationText,
+                    t.AudioUrl, t.DurationSeconds, t.NarratorName
                 })
-            }).FirstOrDefaultAsync(cancellationToken);
-        return tour is null ? NotFound() : Ok(tour);
+            }).ToListAsync(cancellationToken);
+
+        return Ok(new
+        {
+            Id = qr.TourId, Code = qr.TourCode, DefaultName = qr.TourName,
+            qr.TourDescription, qr.Address, qr.CoverImageUrl, qr.IsActive,
+            Translations = Array.Empty<object>(), Locations = locations
+        });
     }
 
     [HttpPost("tours")]
@@ -64,82 +67,47 @@ public sealed class AdminController : ControllerBase
     {
         var validation = ValidateTourRequest(request);
         if (validation is not null) return BadRequest(new { message = validation });
-        var code = request.Code.Trim().ToUpperInvariant();
-        if (await _db.Tours.AnyAsync(x => x.Code == code, cancellationToken))
-            return Conflict(new { message = "Mã tour đã tồn tại." });
-
+        var id = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
-        var tour = new Tour
-        {
-            Id = Guid.NewGuid(), Code = code,
-            DefaultName = request.DefaultName.Trim(),
-            Address = request.Address?.Trim(), CoverImageUrl = request.CoverImageUrl?.Trim(),
-            IsActive = request.IsActive, CreatedAt = now
-        };
-        _db.Tours.Add(tour);
-        _db.TourTranslations.Add(new TourTranslation
-        {
-            Id = Guid.NewGuid(), TourId = tour.Id,
-            LanguageCode = SupportedLanguageCodes.Normalize(request.LanguageCode),
-            Name = request.Name.Trim(), Description = request.Description.Trim(),
-            WelcomeMessage = request.WelcomeMessage?.Trim(), CreatedAt = now
-        });
+        var qr = CreateQr(id, request, now, now.AddYears(10));
+        _db.TourQrCodes.Add(qr);
         await _db.SaveChangesAsync(cancellationToken);
-        return CreatedAtAction(nameof(GetTour), new { id = tour.Id }, new { tour.Id });
+        return CreatedAtAction(nameof(GetTour), new { id }, new { Id = id });
     }
 
     [HttpPut("tours/{id:guid}")]
     public async Task<IActionResult> UpdateTour(
-        Guid id, [FromBody] SaveTourRequest request,
-        CancellationToken cancellationToken)
+        Guid id, [FromBody] SaveTourRequest request, CancellationToken cancellationToken)
     {
         var validation = ValidateTourRequest(request);
         if (validation is not null) return BadRequest(new { message = validation });
-        var tour = await _db.Tours.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (tour is null) return NotFound();
-        var code = request.Code.Trim().ToUpperInvariant();
-        if (await _db.Tours.AnyAsync(x => x.Id != id && x.Code == code, cancellationToken))
-            return Conflict(new { message = "Mã tour đã tồn tại." });
-
-        tour.Code = code;
-        tour.DefaultName = request.DefaultName.Trim();
-        tour.Address = request.Address?.Trim();
-        tour.CoverImageUrl = request.CoverImageUrl?.Trim();
-        tour.IsActive = request.IsActive;
-        tour.UpdatedAt = DateTimeOffset.UtcNow;
-        var language = SupportedLanguageCodes.Normalize(request.LanguageCode);
-        var translation = await _db.TourTranslations.FirstOrDefaultAsync(
-            x => x.TourId == id && x.LanguageCode == language, cancellationToken);
-        if (translation is null)
+        var codes = await _db.TourQrCodes.Where(x => x.TourId == id).ToListAsync(cancellationToken);
+        if (codes.Count == 0) return NotFound();
+        var normalizedCode = request.Code.Trim().ToUpperInvariant();
+        foreach (var code in codes)
         {
-            translation = new TourTranslation
-            {
-                Id = Guid.NewGuid(), TourId = id, LanguageCode = language,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
-            _db.TourTranslations.Add(translation);
+            code.TourCode = normalizedCode;
+            code.TourName = request.DefaultName.Trim();
+            code.TourDescription = request.Description.Trim();
+            code.WelcomeMessage = request.WelcomeMessage?.Trim();
+            code.Address = request.Address?.Trim();
+            code.CoverImageUrl = request.CoverImageUrl?.Trim();
         }
-        translation.Name = request.Name.Trim();
-        translation.Description = request.Description.Trim();
-        translation.WelcomeMessage = request.WelcomeMessage?.Trim();
-        translation.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
 
     [HttpPost("tours/{tourId:guid}/locations")]
     public async Task<IActionResult> CreateLocation(
-        Guid tourId, [FromBody] SaveLocationRequest request,
-        CancellationToken cancellationToken)
+        Guid tourId, [FromBody] SaveLocationRequest request, CancellationToken cancellationToken)
     {
         var validation = ValidateLocationRequest(request);
         if (validation is not null) return BadRequest(new { message = validation });
-        if (!await _db.Tours.AnyAsync(x => x.Id == tourId, cancellationToken))
+        if (!await _db.TourQrCodes.AnyAsync(x => x.TourId == tourId, cancellationToken))
             return NotFound(new { message = "Không tìm thấy tour." });
         var code = request.Code.Trim().ToUpperInvariant();
-        if (await _db.TourLocations.AnyAsync(
-                x => x.TourId == tourId && (x.Code == code || x.DisplayOrder == request.DisplayOrder),
-                cancellationToken))
+        if (await _db.TourLocations.AnyAsync(x => x.TourId == tourId
+                && (x.Code == code || x.DisplayOrder == request.DisplayOrder), cancellationToken))
             return Conflict(new { message = "Mã địa điểm hoặc thứ tự đã được sử dụng trong tour." });
 
         var now = DateTimeOffset.UtcNow;
@@ -152,23 +120,14 @@ public sealed class AdminController : ControllerBase
             IsActive = request.IsActive, CreatedAt = now
         };
         _db.TourLocations.Add(location);
-        _db.TourLocationTranslations.Add(new TourLocationTranslation
-        {
-            Id = Guid.NewGuid(), TourLocationId = location.Id,
-            LanguageCode = SupportedLanguageCodes.Normalize(request.LanguageCode),
-            Title = request.Title.Trim(), Description = request.Description.Trim(),
-            NarrationText = request.NarrationText.Trim(), AudioUrl = request.AudioUrl?.Trim() ?? string.Empty,
-            DurationSeconds = request.DurationSeconds, NarratorName = request.NarratorName?.Trim(),
-            CreatedAt = now
-        });
+        _db.TourLocationTranslations.Add(CreateLocationTranslation(location.Id, request, now));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { location.Id });
     }
 
     [HttpPut("locations/{id:guid}")]
     public async Task<IActionResult> UpdateLocation(
-        Guid id, [FromBody] SaveLocationRequest request,
-        CancellationToken cancellationToken)
+        Guid id, [FromBody] SaveLocationRequest request, CancellationToken cancellationToken)
     {
         var validation = ValidateLocationRequest(request);
         if (validation is not null) return BadRequest(new { message = validation });
@@ -193,28 +152,20 @@ public sealed class AdminController : ControllerBase
             x => x.TourLocationId == id && x.LanguageCode == language, cancellationToken);
         if (translation is null)
         {
-            translation = new TourLocationTranslation
-            {
-                Id = Guid.NewGuid(), TourLocationId = id, LanguageCode = language,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
+            translation = CreateLocationTranslation(id, request, DateTimeOffset.UtcNow);
             _db.TourLocationTranslations.Add(translation);
         }
-        translation.Title = request.Title.Trim();
-        translation.Description = request.Description.Trim();
-        translation.NarrationText = request.NarrationText.Trim();
-        translation.AudioUrl = request.AudioUrl?.Trim() ?? string.Empty;
-        translation.DurationSeconds = request.DurationSeconds;
-        translation.NarratorName = request.NarratorName?.Trim();
-        translation.UpdatedAt = DateTimeOffset.UtcNow;
+        else
+        {
+            UpdateTranslation(translation, request);
+        }
         await _db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
 
     [HttpPatch("locations/{id:guid}/active")]
     public async Task<IActionResult> SetLocationActive(
-        Guid id, [FromBody] SetActiveRequest request,
-        CancellationToken cancellationToken)
+        Guid id, [FromBody] SetActiveRequest request, CancellationToken cancellationToken)
     {
         var location = await _db.TourLocations.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (location is null) return NotFound();
@@ -224,50 +175,13 @@ public sealed class AdminController : ControllerBase
         return NoContent();
     }
 
-    private static string? ValidateTourRequest(SaveTourRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(request.Code) || request.Code.Trim().Length > 50)
-            return "Mã tour bắt buộc và tối đa 50 ký tự.";
-        if (string.IsNullOrWhiteSpace(request.DefaultName) || request.DefaultName.Trim().Length > 200)
-            return "Tên tour bắt buộc và tối đa 200 ký tự.";
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 200)
-            return "Tên bản dịch bắt buộc và tối đa 200 ký tự.";
-        if (request.Description?.Length > 4000 || request.WelcomeMessage?.Length > 2000)
-            return "Mô tả/lời chào vượt quá độ dài cho phép.";
-        if (!SupportedLanguageCodes.IsSupported(request.LanguageCode))
-            return "Ngôn ngữ không được hỗ trợ.";
-        return null;
-    }
-
-    private static string? ValidateLocationRequest(SaveLocationRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(request.Code) || request.Code.Trim().Length > 50)
-            return "Mã địa điểm bắt buộc và tối đa 50 ký tự.";
-        if (string.IsNullOrWhiteSpace(request.DefaultName) || request.DefaultName.Trim().Length > 200)
-            return "Tên địa điểm bắt buộc và tối đa 200 ký tự.";
-        if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Trim().Length > 200)
-            return "Tiêu đề bản dịch bắt buộc và tối đa 200 ký tự.";
-        if (request.Latitude is < -90 or > 90 || request.Longitude is < -180 or > 180)
-            return "Vĩ độ/kinh độ không hợp lệ.";
-        if (request.TriggerRadiusMeters is <= 0 or > 500 || request.DisplayOrder <= 0)
-            return "Bán kính phải từ 0 đến 500m và thứ tự phải lớn hơn 0.";
-        if (request.DurationSeconds < 0 || request.Description?.Length > 4000
-            || request.NarrationText?.Length > 10000 || request.AudioUrl?.Length > 2000)
-            return "Nội dung, audio URL hoặc thời lượng không hợp lệ.";
-        if (!SupportedLanguageCodes.IsSupported(request.LanguageCode))
-            return "Ngôn ngữ không được hỗ trợ.";
-        return null;
-    }
-
     [HttpPatch("tours/{id:guid}/active")]
     public async Task<IActionResult> SetTourActive(
-        Guid id, [FromBody] SetActiveRequest request,
-        CancellationToken cancellationToken)
+        Guid id, [FromBody] SetActiveRequest request, CancellationToken cancellationToken)
     {
-        var tour = await _db.Tours.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (tour is null) return NotFound();
-        tour.IsActive = request.IsActive;
-        tour.UpdatedAt = DateTimeOffset.UtcNow;
+        var codes = await _db.TourQrCodes.Where(x => x.TourId == id).ToListAsync(cancellationToken);
+        if (codes.Count == 0) return NotFound();
+        foreach (var code in codes) code.IsActive = request.IsActive;
         await _db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
@@ -275,60 +189,49 @@ public sealed class AdminController : ControllerBase
     [HttpGet("qrcodes")]
     public async Task<IActionResult> GetQrCodes(CancellationToken cancellationToken)
     {
-        var codes = await _db.TourQrCodes.AsNoTracking()
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(x => new
-            {
-                x.Id, x.AccessCode, x.TourId, TourName = x.Tour.DefaultName,
-                x.IsActive, x.UsageCount, x.MaximumUsageCount,
-                x.CreatedAt, x.ExpiresAt, x.LastUsedAt
-            }).ToListAsync(cancellationToken);
+        var codes = await _db.TourQrCodes.AsNoTracking().OrderByDescending(x => x.CreatedAt)
+            .Select(x => new { x.Id, x.AccessCode, x.TourId, TourName = x.TourName,
+                x.IsActive, x.UsageCount, x.MaximumUsageCount, x.CreatedAt, x.ExpiresAt, x.LastUsedAt })
+            .ToListAsync(cancellationToken);
         return Ok(codes);
     }
 
     [HttpPost("qrcodes")]
     public async Task<IActionResult> CreateQrCode(
-        [FromBody] CreateQrCodeRequest request,
-        CancellationToken cancellationToken)
+        [FromBody] CreateQrCodeRequest request, CancellationToken cancellationToken)
     {
         if (request.ExpiresInDays is < 1 or > 3650)
             return BadRequest(new { message = "Thời hạn QR phải từ 1 đến 3650 ngày." });
         if (request.MaximumUsageCount is <= 0)
             return BadRequest(new { message = "Số lượt dùng tối đa phải lớn hơn 0." });
-
-        var tour = await _db.Tours.FirstOrDefaultAsync(
-            x => x.Id == request.TourId && x.IsActive, cancellationToken);
-        if (tour is null)
-            return BadRequest(new { message = "Tour không tồn tại hoặc đang bị tắt." });
-
+        var source = await _db.TourQrCodes.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TourId == request.TourId && x.IsActive, cancellationToken);
+        if (source is null) return BadRequest(new { message = "Tour không tồn tại hoặc đang bị tắt." });
         var now = DateTimeOffset.UtcNow;
         var qr = new TourQrCode
         {
-            Id = Guid.NewGuid(),
-            TourId = tour.Id,
+            Id = Guid.NewGuid(), TourId = source.TourId, TourCode = source.TourCode,
+            TourName = source.TourName, TourDescription = source.TourDescription,
+            WelcomeMessage = source.WelcomeMessage, Address = source.Address,
+            CoverImageUrl = source.CoverImageUrl,
             AccessCode = Convert.ToHexString(RandomNumberGenerator.GetBytes(8)),
-            Type = QrCodeType.Reusable,
-            IsActive = true,
-            UsageCount = 0,
-            MaximumUsageCount = request.MaximumUsageCount,
-            CreatedAt = now,
+            Type = QrCodeType.Reusable, IsActive = true, UsageCount = 0,
+            MaximumUsageCount = request.MaximumUsageCount, CreatedAt = now,
             ExpiresAt = now.AddDays(request.ExpiresInDays)
         };
         _db.TourQrCodes.Add(qr);
         await _db.SaveChangesAsync(cancellationToken);
         return Created($"/api/admin/qrcodes/{qr.Id}", new
         {
-            qr.Id, qr.AccessCode, qr.TourId, TourName = tour.DefaultName,
+            qr.Id, qr.AccessCode, qr.TourId, TourName = qr.TourName,
             qr.ExpiresAt, qr.MaximumUsageCount
         });
     }
 
     [HttpPatch("qrcodes/{id:guid}/deactivate")]
-    public async Task<IActionResult> DeactivateQrCode(
-        Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeactivateQrCode(Guid id, CancellationToken cancellationToken)
     {
-        var qr = await _db.TourQrCodes.FirstOrDefaultAsync(
-            x => x.Id == id, cancellationToken);
+        var qr = await _db.TourQrCodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (qr is null) return NotFound();
         qr.IsActive = false;
         qr.DeactivatedAt = DateTimeOffset.UtcNow;
@@ -336,19 +239,66 @@ public sealed class AdminController : ControllerBase
         return NoContent();
     }
 
+    private static TourQrCode CreateQr(Guid tourId, SaveTourRequest request, DateTimeOffset now, DateTimeOffset expiresAt) => new()
+    {
+        Id = Guid.NewGuid(), TourId = tourId, TourCode = request.Code.Trim().ToUpperInvariant(),
+        TourName = request.DefaultName.Trim(), TourDescription = request.Description.Trim(),
+        WelcomeMessage = request.WelcomeMessage?.Trim(), Address = request.Address?.Trim(),
+        CoverImageUrl = request.CoverImageUrl?.Trim(),
+        AccessCode = Convert.ToHexString(RandomNumberGenerator.GetBytes(8)),
+        Type = QrCodeType.Reusable, IsActive = request.IsActive, CreatedAt = now,
+        ExpiresAt = expiresAt
+    };
+
+    private static TourLocationTranslation CreateLocationTranslation(Guid id, SaveLocationRequest request, DateTimeOffset now)
+    {
+        var translation = new TourLocationTranslation
+        {
+            Id = Guid.NewGuid(), TourLocationId = id,
+            LanguageCode = SupportedLanguageCodes.Normalize(request.LanguageCode), CreatedAt = now
+        };
+        UpdateTranslation(translation, request);
+        return translation;
+    }
+
+    private static void UpdateTranslation(TourLocationTranslation translation, SaveLocationRequest request)
+    {
+        translation.Title = request.Title.Trim();
+        translation.Description = request.Description.Trim();
+        translation.NarrationText = request.NarrationText.Trim();
+        translation.AudioUrl = request.AudioUrl?.Trim() ?? string.Empty;
+        translation.DurationSeconds = request.DurationSeconds;
+        translation.NarratorName = request.NarratorName?.Trim();
+        translation.UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    private static string? ValidateTourRequest(SaveTourRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Code) || request.Code.Trim().Length > 50) return "Mã tour bắt buộc và tối đa 50 ký tự.";
+        if (string.IsNullOrWhiteSpace(request.DefaultName) || request.DefaultName.Trim().Length > 200) return "Tên tour bắt buộc và tối đa 200 ký tự.";
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 200) return "Tên bản dịch bắt buộc và tối đa 200 ký tự.";
+        if (request.Description?.Length > 4000 || request.WelcomeMessage?.Length > 2000) return "Mô tả/lời chào vượt quá độ dài cho phép.";
+        if (!SupportedLanguageCodes.IsSupported(request.LanguageCode)) return "Ngôn ngữ không được hỗ trợ.";
+        return null;
+    }
+
+    private static string? ValidateLocationRequest(SaveLocationRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Code) || request.Code.Trim().Length > 50) return "Mã địa điểm bắt buộc và tối đa 50 ký tự.";
+        if (string.IsNullOrWhiteSpace(request.DefaultName) || request.DefaultName.Trim().Length > 200) return "Tên địa điểm bắt buộc và tối đa 200 ký tự.";
+        if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Trim().Length > 200) return "Tiêu đề bản dịch bắt buộc và tối đa 200 ký tự.";
+        if (request.Latitude is < -90 or > 90 || request.Longitude is < -180 or > 180) return "Vĩ độ/kinh độ không hợp lệ.";
+        if (request.TriggerRadiusMeters is <= 0 or > 500 || request.DisplayOrder <= 0) return "Bán kính phải từ 0 đến 500m và thứ tự phải lớn hơn 0.";
+        if (request.DurationSeconds < 0 || request.Description?.Length > 4000 || request.NarrationText?.Length > 10000 || request.AudioUrl?.Length > 2000) return "Nội dung, audio URL hoặc thời lượng không hợp lệ.";
+        if (!SupportedLanguageCodes.IsSupported(request.LanguageCode)) return "Ngôn ngữ không được hỗ trợ.";
+        return null;
+    }
+
     public sealed record SetActiveRequest(bool IsActive);
-    public sealed record SaveTourRequest(
-        string Code, string DefaultName, string LanguageCode, string Name,
-        string Description, string? WelcomeMessage, string? Address,
-        string? CoverImageUrl, bool IsActive = true);
-    public sealed record SaveLocationRequest(
-        string Code, string DefaultName, string LanguageCode, string Title,
-        string Description, string NarrationText, string? AudioUrl,
-        double DurationSeconds, string? NarratorName,
-        double Latitude, double Longitude, double TriggerRadiusMeters,
-        int DisplayOrder, string? ImageUrl, bool IsActive = true);
-    public sealed record CreateQrCodeRequest(
-        Guid TourId,
-        int ExpiresInDays = 30,
-        int? MaximumUsageCount = null);
+    public sealed record SaveTourRequest(string Code, string DefaultName, string LanguageCode, string Name,
+        string Description, string? WelcomeMessage, string? Address, string? CoverImageUrl, bool IsActive = true);
+    public sealed record SaveLocationRequest(string Code, string DefaultName, string LanguageCode, string Title,
+        string Description, string NarrationText, string? AudioUrl, double DurationSeconds, string? NarratorName,
+        double Latitude, double Longitude, double TriggerRadiusMeters, int DisplayOrder, string? ImageUrl, bool IsActive = true);
+    public sealed record CreateQrCodeRequest(Guid TourId, int ExpiresInDays = 30, int? MaximumUsageCount = null);
 }

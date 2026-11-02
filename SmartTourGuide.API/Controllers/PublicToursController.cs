@@ -71,46 +71,33 @@ public sealed class PublicToursController : ControllerBase
                 });
             }
 
-            var tourEntity = await _db.Tours
+            var locations = await _db.TourLocations
                 .AsNoTracking()
+                .Where(x => x.TourId == qr.TourId && x.IsActive)
                 .Include(x => x.Translations)
-                .Include(x => x.Locations.Where(l => l.IsActive))
-                    .ThenInclude(l => l.Translations)
-                .AsSplitQuery()
-                .FirstOrDefaultAsync(
-                    x => x.Id == qr.TourId && x.IsActive,
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync(
                     cancellationToken);
-
-            if (tourEntity is null)
-            {
-                return NotFound(new
-                {
-                    message = "Mã QR không hợp lệ, đã hết hạn hoặc tour đã ngừng hoạt động."
-                });
-            }
-
-            var selectedTourTranslation = tourEntity.Translations
-                .FirstOrDefault(t => t.LanguageCode == normalizedLanguage);
 
             var tour = new
             {
-                tourEntity.Id,
-                tourEntity.Code,
-                Name = selectedTourTranslation?.Name ?? tourEntity.DefaultName,
-                Description = selectedTourTranslation?.Description,
-                WelcomeMessage = selectedTourTranslation?.WelcomeMessage,
-                tourEntity.CoverImageUrl,
-                tourEntity.Address,
+                Id = qr.TourId,
+                Code = qr.TourCode,
+                Name = qr.TourName,
+                Description = qr.TourDescription,
+                WelcomeMessage = qr.WelcomeMessage,
+                qr.CoverImageUrl,
+                qr.Address,
 
-                Translations = tourEntity.Translations.Select(t => new
+                Translations = new[] { new
                 {
-                    t.LanguageCode,
-                    t.Name,
-                    t.Description,
-                    t.WelcomeMessage
-                }).ToList(),
+                    LanguageCode = "vi",
+                    Name = qr.TourName,
+                    Description = qr.TourDescription,
+                    WelcomeMessage = qr.WelcomeMessage
+                } },
 
-                Locations = tourEntity.Locations
+                Locations = locations
                     .OrderBy(l => l.DisplayOrder)
                     .Select(l =>
                     {
@@ -182,7 +169,7 @@ public sealed class PublicToursController : ControllerBase
                 var session = await _db.TourSessions
                     .FirstOrDefaultAsync(
                         x => x.GuestIdentityId == guest.Id
-                            && x.TourId == tourEntity.Id
+                            && x.TourId == qr.TourId
                             && x.Status == TourSessionStatus.Active
                             && x.ExpiresAt > now,
                         cancellationToken);
@@ -192,7 +179,7 @@ public sealed class PublicToursController : ControllerBase
                     session = new TourSession
                     {
                         Id = Guid.NewGuid(),
-                        TourId = tourEntity.Id,
+                        TourId = qr.TourId,
                         IdentityType = IdentityType.Guest,
                         GuestIdentityId = guest.Id,
                         SourceQrCodeId = qr.Id,

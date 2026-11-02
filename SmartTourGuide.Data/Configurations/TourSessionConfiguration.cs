@@ -22,15 +22,10 @@ public sealed class TourSessionConfiguration
 
                 tableBuilder.HasCheckConstraint(
                     "CK_TourSessions_Identity",
-                    "(" +
-                    "[IdentityType] = 1 " +
-                    "AND [UserId] IS NOT NULL " +
-                    "AND [GuestIdentityId] IS NULL" +
-                    ") OR (" +
+                    "([IdentityType] = 1 " +
+                    "AND [GuestIdentityId] IS NULL) OR (" +
                     "[IdentityType] = 2 " +
-                    "AND [UserId] IS NULL " +
-                    "AND [GuestIdentityId] IS NOT NULL" +
-                    ")");
+                    "AND [GuestIdentityId] IS NOT NULL)");
 
                 tableBuilder.HasCheckConstraint(
                     "CK_TourSessions_EndTime",
@@ -49,8 +44,6 @@ public sealed class TourSessionConfiguration
         builder.Property(session => session.IdentityType)
             .IsRequired()
             .HasConversion<int>();
-
-        builder.Property(session => session.UserId);
 
         builder.Property(
             session => session.GuestIdentityId);
@@ -82,16 +75,6 @@ public sealed class TourSessionConfiguration
                 session =>
                     new
                     {
-                        session.UserId,
-                        session.Status
-                    })
-            .HasDatabaseName(
-                "IX_TourSessions_UserId_Status");
-
-        builder.HasIndex(
-                session =>
-                    new
-                    {
                         session.GuestIdentityId,
                         session.Status
                     })
@@ -113,16 +96,6 @@ public sealed class TourSessionConfiguration
             .HasDatabaseName(
                 "IX_TourSessions_ExpiresAt");
 
-        builder.HasOne(session => session.Tour)
-            .WithMany(tour => tour.Sessions)
-            .HasForeignKey(session => session.TourId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(session => session.User)
-            .WithMany(user => user.TourSessions)
-            .HasForeignKey(session => session.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         builder.HasOne(session => session.GuestIdentity)
             .WithMany(
                 guestIdentity =>
@@ -138,29 +111,5 @@ public sealed class TourSessionConfiguration
                 session => session.SourceQrCodeId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(session => session.Visits)
-            .WithOne(visit => visit.TourSession)
-            .HasForeignKey(
-                visit => visit.TourSessionId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasMany(
-                session =>
-                    session.PlaybackProgresses)
-            .WithOne(
-                progress =>
-                    progress.TourSession)
-            .HasForeignKey(
-                progress =>
-                    progress.TourSessionId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasMany(
-                session =>
-                    session.LocationDetectionLogs)
-            .WithOne(log => log.TourSession)
-            .HasForeignKey(
-                log => log.TourSessionId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 }
