@@ -17,112 +17,10 @@ namespace SmartTourGuide.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.AudioPlaybackProgress", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<double>("CompletionPercentage")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(5, 2)
-                        .HasColumnType("float(5)")
-                        .HasDefaultValue(0.0);
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<double>("DurationSeconds")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("float(10)");
-
-                    b.Property<bool>("IsCompleted")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("LanguageCode")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasDefaultValue("vi");
-
-                    b.Property<DateTimeOffset>("LastListenedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<double>("PositionSeconds")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(10, 2)
-                        .HasColumnType("float(10)")
-                        .HasDefaultValue(0.0);
-
-                    b.Property<Guid>("TourLocationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("TourLocationTranslationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("TourSessionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TourLocationTranslationId");
-
-                    b.HasIndex("TourLocationId", "LanguageCode")
-                        .HasDatabaseName("IX_AudioPlaybackProgresses_Location_Language");
-
-                    b.HasIndex("TourSessionId", "LastListenedAt")
-                        .HasDatabaseName("IX_AudioPlaybackProgresses_Session_LastListenedAt");
-
-                    b.HasIndex("TourSessionId", "TourLocationTranslationId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_AudioPlaybackProgresses_Session_Translation");
-
-                    b.ToTable("AudioPlaybackProgresses", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_AudioPlaybackProgresses_CompletedAt", "([IsCompleted] = 0 AND [CompletedAt] IS NULL) OR ([IsCompleted] = 1 AND [CompletedAt] IS NOT NULL)");
-
-                            t.HasCheckConstraint("CK_AudioPlaybackProgresses_CompletionPercentage", "[CompletionPercentage] >= 0 AND [CompletionPercentage] <= 100");
-
-                            t.HasCheckConstraint("CK_AudioPlaybackProgresses_DurationSeconds", "[DurationSeconds] > 0");
-
-                            t.HasCheckConstraint("CK_AudioPlaybackProgresses_PositionSeconds", "[PositionSeconds] >= 0 AND [PositionSeconds] <= [DurationSeconds]");
-                        });
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.DashboardStatisticsReset", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedNever()
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset>("ResetAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("ScanCountAtReset")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DashboardStatisticsResets", (string)null, t =>
-                        {
-                            t.HasCheckConstraint("CK_DashboardStatisticsResets_Singleton", "[Id] = 1");
-
-                            t.HasCheckConstraint("CK_DashboardStatisticsResets_ScanCount", "[ScanCountAtReset] >= 0");
-                        });
-                });
 
             modelBuilder.Entity("SmartTourGuide.Data.Entities.GuestIdentity", b =>
                 {
@@ -169,148 +67,6 @@ namespace SmartTourGuide.Data.Migrations
                         .HasDatabaseName("IX_GuestIdentities_ExpiresAt");
 
                     b.ToTable("GuestIdentities", (string)null);
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.LocationDetectionLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<double>("AccuracyMeters")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("float(10)");
-
-                    b.Property<bool>("AudioTriggerRequested")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<Guid?>("DetectedTourLocationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("DeviceRecordedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<double?>("DistanceMeters")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("float(10)");
-
-                    b.Property<double>("Latitude")
-                        .HasPrecision(9, 6)
-                        .HasColumnType("float(9)");
-
-                    b.Property<bool>("LocationDetected")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<double>("Longitude")
-                        .HasPrecision(9, 6)
-                        .HasColumnType("float(9)");
-
-                    b.Property<DateTimeOffset>("ReceivedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid>("TourSessionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("WithinTriggerRadius")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DetectedTourLocationId", "ReceivedAt")
-                        .HasDatabaseName("IX_LocationDetectionLogs_Location_ReceivedAt");
-
-                    b.HasIndex("TourSessionId", "ReceivedAt")
-                        .HasDatabaseName("IX_LocationDetectionLogs_Session_ReceivedAt");
-
-                    b.HasIndex("TourSessionId", "LocationDetected", "ReceivedAt")
-                        .HasDatabaseName("IX_LocationDetectionLogs_Session_Detected_ReceivedAt");
-
-                    b.ToTable("LocationDetectionLogs", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_LocationDetectionLogs_AccuracyMeters", "[AccuracyMeters] >= 0");
-
-                            t.HasCheckConstraint("CK_LocationDetectionLogs_AudioTrigger", "[AudioTriggerRequested] = 0 OR ([LocationDetected] = 1 AND [WithinTriggerRadius] = 1)");
-
-                            t.HasCheckConstraint("CK_LocationDetectionLogs_DetectedLocation", "([LocationDetected] = 0 AND [DetectedTourLocationId] IS NULL) OR ([LocationDetected] = 1 AND [DetectedTourLocationId] IS NOT NULL)");
-
-                            t.HasCheckConstraint("CK_LocationDetectionLogs_DeviceRecordedAt", "[DeviceRecordedAt] <= DATEADD(MINUTE, 5, [ReceivedAt])");
-
-                            t.HasCheckConstraint("CK_LocationDetectionLogs_DistanceMeters", "[DistanceMeters] IS NULL OR [DistanceMeters] >= 0");
-
-                            t.HasCheckConstraint("CK_LocationDetectionLogs_Latitude", "[Latitude] >= -90 AND [Latitude] <= 90");
-
-                            t.HasCheckConstraint("CK_LocationDetectionLogs_Longitude", "[Longitude] >= -180 AND [Longitude] <= 180");
-
-                            t.HasCheckConstraint("CK_LocationDetectionLogs_TriggerRadius", "[WithinTriggerRadius] = 0 OR [LocationDetected] = 1");
-                        });
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.Tour", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<double?>("CenterLatitude")
-                        .HasPrecision(9, 6)
-                        .HasColumnType("float(9)");
-
-                    b.Property<double?>("CenterLongitude")
-                        .HasPrecision(9, 6)
-                        .HasColumnType("float(9)");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("CoverImageUrl")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("DefaultName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Tours_Code");
-
-                    b.HasIndex("IsActive")
-                        .HasDatabaseName("IX_Tours_IsActive");
-
-                    b.ToTable("Tours", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_Tours_CenterLatitude", "[CenterLatitude] IS NULL OR ([CenterLatitude] >= -90 AND [CenterLatitude] <= 90)");
-
-                            t.HasCheckConstraint("CK_Tours_CenterLongitude", "[CenterLongitude] IS NULL OR ([CenterLongitude] >= -180 AND [CenterLongitude] <= 180)");
-                        });
                 });
 
             modelBuilder.Entity("SmartTourGuide.Data.Entities.TourLocation", b =>
@@ -463,6 +219,14 @@ namespace SmartTourGuide.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CoverImageUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -483,8 +247,22 @@ namespace SmartTourGuide.Data.Migrations
                     b.Property<int?>("MaximumUsageCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("TourCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TourDescription")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<Guid>("TourId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TourName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
@@ -496,6 +274,10 @@ namespace SmartTourGuide.Data.Migrations
 
                     b.Property<DateTimeOffset?>("UsedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("WelcomeMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.HasKey("Id");
 
@@ -562,9 +344,6 @@ namespace SmartTourGuide.Data.Migrations
                     b.Property<Guid>("TourId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ExpiresAt")
@@ -578,249 +357,14 @@ namespace SmartTourGuide.Data.Migrations
                     b.HasIndex("TourId", "Status")
                         .HasDatabaseName("IX_TourSessions_TourId_Status");
 
-                    b.HasIndex("UserId", "Status")
-                        .HasDatabaseName("IX_TourSessions_UserId_Status");
-
                     b.ToTable("TourSessions", null, t =>
                         {
                             t.HasCheckConstraint("CK_TourSessions_EndTime", "[EndedAt] IS NULL OR [EndedAt] >= [StartedAt]");
 
                             t.HasCheckConstraint("CK_TourSessions_Expiration", "[ExpiresAt] > [StartedAt]");
 
-                            t.HasCheckConstraint("CK_TourSessions_Identity", "([IdentityType] = 1 AND [UserId] IS NOT NULL AND [GuestIdentityId] IS NULL) OR ([IdentityType] = 2 AND [UserId] IS NULL AND [GuestIdentityId] IS NOT NULL)");
+                            t.HasCheckConstraint("CK_TourSessions_Identity", "([IdentityType] = 1 AND [GuestIdentityId] IS NULL) OR ([IdentityType] = 2 AND [GuestIdentityId] IS NOT NULL)");
                         });
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.TourTranslation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("LanguageCode")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<Guid>("TourId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("WelcomeMessage")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LanguageCode")
-                        .HasDatabaseName("IX_TourTranslations_LanguageCode");
-
-                    b.HasIndex("TourId", "LanguageCode")
-                        .IsUnique()
-                        .HasDatabaseName("UX_TourTranslations_TourId_LanguageCode");
-
-                    b.ToTable("TourTranslations", (string)null);
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.TourVisit", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<double?>("AccuracyMeters")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("float(10)");
-
-                    b.Property<bool>("AudioTriggered")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<DateTimeOffset?>("AudioTriggeredAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<double?>("DetectedLatitude")
-                        .HasPrecision(9, 6)
-                        .HasColumnType("float(9)");
-
-                    b.Property<double?>("DetectedLongitude")
-                        .HasPrecision(9, 6)
-                        .HasColumnType("float(9)");
-
-                    b.Property<int>("DetectionMethod")
-                        .HasColumnType("int");
-
-                    b.Property<double?>("DistanceMeters")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("float(10)");
-
-                    b.Property<string>("LanguageCode")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasDefaultValue("vi");
-
-                    b.Property<Guid>("TourLocationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("TourSessionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("VisitedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TourLocationId", "VisitedAt")
-                        .HasDatabaseName("IX_TourVisits_TourLocationId_VisitedAt");
-
-                    b.HasIndex("TourSessionId", "VisitedAt")
-                        .HasDatabaseName("IX_TourVisits_TourSessionId_VisitedAt");
-
-                    b.HasIndex("TourSessionId", "TourLocationId", "VisitedAt")
-                        .HasDatabaseName("IX_TourVisits_Session_Location_VisitedAt");
-
-                    b.ToTable("TourVisits", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_TourVisits_AccuracyMeters", "[AccuracyMeters] IS NULL OR [AccuracyMeters] >= 0");
-
-                            t.HasCheckConstraint("CK_TourVisits_AudioTriggeredAt", "([AudioTriggered] = 0 AND [AudioTriggeredAt] IS NULL) OR ([AudioTriggered] = 1 AND [AudioTriggeredAt] IS NOT NULL)");
-
-                            t.HasCheckConstraint("CK_TourVisits_DetectedLatitude", "[DetectedLatitude] IS NULL OR ([DetectedLatitude] >= -90 AND [DetectedLatitude] <= 90)");
-
-                            t.HasCheckConstraint("CK_TourVisits_DetectedLongitude", "[DetectedLongitude] IS NULL OR ([DetectedLongitude] >= -180 AND [DetectedLongitude] <= 180)");
-
-                            t.HasCheckConstraint("CK_TourVisits_DistanceMeters", "[DistanceMeters] IS NULL OR [DistanceMeters] >= 0");
-                        });
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(320)
-                        .HasColumnType("nvarchar(320)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<DateTimeOffset?>("LastLoginAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("NormalizedEmail")
-                        .IsRequired()
-                        .HasMaxLength(320)
-                        .HasColumnType("nvarchar(320)");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("PreferredLanguageCode")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasDefaultValue("vi");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedEmail")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Users_NormalizedEmail");
-
-                    b.ToTable("Users", (string)null);
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.AudioPlaybackProgress", b =>
-                {
-                    b.HasOne("SmartTourGuide.Data.Entities.TourLocation", "TourLocation")
-                        .WithMany("PlaybackProgresses")
-                        .HasForeignKey("TourLocationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SmartTourGuide.Data.Entities.TourLocationTranslation", "Translation")
-                        .WithMany("PlaybackProgresses")
-                        .HasForeignKey("TourLocationTranslationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SmartTourGuide.Data.Entities.TourSession", "TourSession")
-                        .WithMany("PlaybackProgresses")
-                        .HasForeignKey("TourSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("TourLocation");
-
-                    b.Navigation("TourSession");
-
-                    b.Navigation("Translation");
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.LocationDetectionLog", b =>
-                {
-                    b.HasOne("SmartTourGuide.Data.Entities.TourLocation", "DetectedTourLocation")
-                        .WithMany("LocationDetectionLogs")
-                        .HasForeignKey("DetectedTourLocationId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SmartTourGuide.Data.Entities.TourSession", "TourSession")
-                        .WithMany("LocationDetectionLogs")
-                        .HasForeignKey("TourSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("DetectedTourLocation");
-
-                    b.Navigation("TourSession");
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.TourLocation", b =>
-                {
-                    b.HasOne("SmartTourGuide.Data.Entities.Tour", "Tour")
-                        .WithMany("Locations")
-                        .HasForeignKey("TourId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tour");
                 });
 
             modelBuilder.Entity("SmartTourGuide.Data.Entities.TourLocationTranslation", b =>
@@ -832,17 +376,6 @@ namespace SmartTourGuide.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("TourLocation");
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.TourQrCode", b =>
-                {
-                    b.HasOne("SmartTourGuide.Data.Entities.Tour", "Tour")
-                        .WithMany("QrCodes")
-                        .HasForeignKey("TourId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tour");
                 });
 
             modelBuilder.Entity("SmartTourGuide.Data.Entities.TourSession", b =>
@@ -857,54 +390,9 @@ namespace SmartTourGuide.Data.Migrations
                         .HasForeignKey("SourceQrCodeId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("SmartTourGuide.Data.Entities.Tour", "Tour")
-                        .WithMany("Sessions")
-                        .HasForeignKey("TourId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SmartTourGuide.Data.Entities.User", "User")
-                        .WithMany("TourSessions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("GuestIdentity");
 
                     b.Navigation("SourceQrCode");
-
-                    b.Navigation("Tour");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.TourTranslation", b =>
-                {
-                    b.HasOne("SmartTourGuide.Data.Entities.Tour", "Tour")
-                        .WithMany("Translations")
-                        .HasForeignKey("TourId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tour");
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.TourVisit", b =>
-                {
-                    b.HasOne("SmartTourGuide.Data.Entities.TourLocation", "TourLocation")
-                        .WithMany("Visits")
-                        .HasForeignKey("TourLocationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SmartTourGuide.Data.Entities.TourSession", "TourSession")
-                        .WithMany("Visits")
-                        .HasForeignKey("TourSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("TourLocation");
-
-                    b.Navigation("TourSession");
                 });
 
             modelBuilder.Entity("SmartTourGuide.Data.Entities.GuestIdentity", b =>
@@ -912,50 +400,14 @@ namespace SmartTourGuide.Data.Migrations
                     b.Navigation("TourSessions");
                 });
 
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.Tour", b =>
-                {
-                    b.Navigation("Locations");
-
-                    b.Navigation("QrCodes");
-
-                    b.Navigation("Sessions");
-
-                    b.Navigation("Translations");
-                });
-
             modelBuilder.Entity("SmartTourGuide.Data.Entities.TourLocation", b =>
                 {
-                    b.Navigation("LocationDetectionLogs");
-
-                    b.Navigation("PlaybackProgresses");
-
                     b.Navigation("Translations");
-
-                    b.Navigation("Visits");
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.TourLocationTranslation", b =>
-                {
-                    b.Navigation("PlaybackProgresses");
                 });
 
             modelBuilder.Entity("SmartTourGuide.Data.Entities.TourQrCode", b =>
                 {
                     b.Navigation("Sessions");
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.TourSession", b =>
-                {
-                    b.Navigation("LocationDetectionLogs");
-
-                    b.Navigation("PlaybackProgresses");
-
-                    b.Navigation("Visits");
-                });
-
-            modelBuilder.Entity("SmartTourGuide.Data.Entities.User", b =>
-                {
-                    b.Navigation("TourSessions");
                 });
 #pragma warning restore 612, 618
         }

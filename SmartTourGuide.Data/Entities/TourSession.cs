@@ -10,8 +10,6 @@ public sealed class TourSession
 
     public IdentityType IdentityType { get; set; }
 
-    public Guid? UserId { get; set; }
-
     public Guid? GuestIdentityId { get; set; }
 
     public Guid? SourceQrCodeId { get; set; }
@@ -30,24 +28,8 @@ public sealed class TourSession
 
     public DateTimeOffset? LastActivityAt { get; set; }
 
-    public Tour Tour { get; set; } =
-        null!;
-
-    public User? User { get; set; }
-
     public GuestIdentity? GuestIdentity { get; set; }
 
     public TourQrCode? SourceQrCode { get; set; }
 
-    public ICollection<TourVisit> Visits
-        { get; set; } =
-        new List<TourVisit>();
-
-    public ICollection<AudioPlaybackProgress>
-        PlaybackProgresses { get; set; } =
-        new List<AudioPlaybackProgress>();
-
-    public ICollection<LocationDetectionLog>
-        LocationDetectionLogs { get; set; } =
-        new List<LocationDetectionLog>();
 }

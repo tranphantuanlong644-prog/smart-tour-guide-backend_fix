@@ -122,11 +122,6 @@ public sealed class TourLocationConfiguration
             .HasDatabaseName(
                 "IX_TourLocations_IsActive");
 
-        builder.HasOne(location => location.Tour)
-            .WithMany(tour => tour.Locations)
-            .HasForeignKey(location => location.TourId)
-            .OnDelete(DeleteBehavior.Cascade);
-
         builder.HasMany(location => location.Translations)
             .WithOne(
                 translation =>
@@ -136,32 +131,5 @@ public sealed class TourLocationConfiguration
                     translation.TourLocationId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasMany(location => location.Visits)
-            .WithOne(visit => visit.TourLocation)
-            .HasForeignKey(
-                visit => visit.TourLocationId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasMany(
-                location =>
-                    location.PlaybackProgresses)
-            .WithOne(
-                progress =>
-                    progress.TourLocation)
-            .HasForeignKey(
-                progress =>
-                    progress.TourLocationId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasMany(
-                location =>
-                    location.LocationDetectionLogs)
-            .WithOne(
-                log =>
-                    log.DetectedTourLocation)
-            .HasForeignKey(
-                log =>
-                    log.DetectedTourLocationId)
-            .OnDelete(DeleteBehavior.SetNull);
     }
 }

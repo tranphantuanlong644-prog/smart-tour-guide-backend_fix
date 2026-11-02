@@ -115,16 +115,5 @@ public sealed class TourLocationTranslationConfiguration
             .OnDelete(
                 DeleteBehavior.Cascade);
 
-        builder.HasMany(
-                translation =>
-                    translation.PlaybackProgresses)
-            .WithOne(
-                progress =>
-                    progress.Translation)
-            .HasForeignKey(
-                progress =>
-                    progress.TourLocationTranslationId)
-            .OnDelete(
-                DeleteBehavior.Restrict);
     }
 }

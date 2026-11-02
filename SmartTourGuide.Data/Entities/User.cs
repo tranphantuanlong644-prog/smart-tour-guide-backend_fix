@@ -32,8 +32,4 @@ public sealed class User
     public DateTimeOffset? UpdatedAt { get; set; }
 
     public DateTimeOffset? LastLoginAt { get; set; }
-
-public ICollection<TourSession> TourSessions
-    { get; set; } =
-    new List<TourSession>();
 }

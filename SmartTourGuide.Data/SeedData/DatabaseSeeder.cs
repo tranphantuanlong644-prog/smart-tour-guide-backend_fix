@@ -32,51 +32,13 @@ public static class DatabaseSeeder
         Guid.Parse(
             "25555555-5555-5555-5555-555555555555");
 
-    private static readonly Guid
-        VietnameseTourTranslationId =
-            Guid.Parse(
-                "31111111-1111-1111-1111-111111111111");
-
-    private static readonly Guid
-        EnglishTourTranslationId =
-            Guid.Parse(
-                "32222222-2222-2222-2222-222222222222");
-
-    private static readonly Guid
-        SimplifiedChineseTourTranslationId =
-            Guid.Parse(
-                "33333333-3333-3333-3333-333333333333");
-
-    private static readonly Guid
-        HongKongChineseTourTranslationId =
-            Guid.Parse(
-                "34444444-4444-4444-4444-444444444444");
-
-    private static readonly Guid
-        SpanishTourTranslationId =
-            Guid.Parse(
-                "35555555-5555-5555-5555-555555555555");
-
     public static async Task SeedAsync(
         SmartTourGuideDbContext dbContext,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
 
-        await SeedTourAsync(
-            dbContext,
-            cancellationToken);
-
-        // Lưu Tour trước vì Translation và Location
-        // đều sử dụng TourId làm khóa ngoại.
-        await dbContext.SaveChangesAsync(
-            cancellationToken);
-
         await SeedDemoQrCodeAsync(
-            dbContext,
-            cancellationToken);
-
-        await SeedTourTranslationsAsync(
             dbContext,
             cancellationToken);
 
@@ -113,6 +75,12 @@ public static class DatabaseSeeder
             {
                 Id = Guid.Parse("41111111-1111-1111-1111-111111111111"),
                 TourId = VietNamQuocTuTourId,
+                TourCode = "VNTQ-MAIN-TOUR",
+                TourName = "Tham quan Việt Nam Quốc Tự",
+                TourDescription = "Hành trình tham quan giới thiệu các khu vực chính trong khuôn viên Việt Nam Quốc Tự.",
+                WelcomeMessage = "Chào mừng bạn đến với hành trình tham quan Việt Nam Quốc Tự.",
+                CoverImageUrl = "/images/tours/vietnam-quoc-tu.jpg",
+                Address = "244 đường Ba Tháng Hai, Thành phố Hồ Chí Minh",
                 AccessCode = accessCode,
                 Type = QrCodeType.Reusable,
                 IsActive = true,
@@ -121,140 +89,6 @@ public static class DatabaseSeeder
             },
             cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private static async Task SeedTourAsync(
-        SmartTourGuideDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var tourExists =
-            await dbContext.Tours.AnyAsync(
-                tour =>
-                    tour.Id == VietNamQuocTuTourId,
-                cancellationToken);
-
-        if (tourExists)
-        {
-            return;
-        }
-
-        var now = DateTimeOffset.UtcNow;
-
-        var tour =
-            new Tour
-            {
-                Id = VietNamQuocTuTourId,
-                Code = "VNTQ-MAIN-TOUR",
-                DefaultName =
-                    "Tham quan Việt Nam Quốc Tự",
-                CoverImageUrl =
-                    "/images/tours/vietnam-quoc-tu.jpg",
-                Address =
-                    "244 đường Ba Tháng Hai, " +
-                    "Thành phố Hồ Chí Minh",
-                CenterLatitude = null,
-                CenterLongitude = null,
-                IsActive = true,
-                CreatedAt = now
-            };
-
-        await dbContext.Tours.AddAsync(
-            tour,
-            cancellationToken);
-    }
-
-    private static async Task SeedTourTranslationsAsync(
-        SmartTourGuideDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var existingLanguageCodes =
-            await dbContext.TourTranslations
-                .Where(
-                    translation =>
-                        translation.TourId ==
-                            VietNamQuocTuTourId)
-                .Select(
-                    translation =>
-                        translation.LanguageCode)
-                .ToListAsync(cancellationToken);
-
-        var existingLanguageCodeSet =
-            existingLanguageCodes.ToHashSet(
-                StringComparer.OrdinalIgnoreCase);
-
-        var now = DateTimeOffset.UtcNow;
-
-        var translations =
-            new[]
-            {
-                CreateTourTranslation(
-                    VietnameseTourTranslationId,
-                    SupportedLanguageCodes.Vietnamese,
-                    "Tham quan Việt Nam Quốc Tự",
-                    "Hành trình tham quan giới thiệu " +
-                    "các khu vực chính trong khuôn viên " +
-                    "Việt Nam Quốc Tự.",
-                    "Chào mừng bạn đến với hành trình " +
-                    "tham quan Việt Nam Quốc Tự.",
-                    now),
-
-                CreateTourTranslation(
-                    EnglishTourTranslationId,
-                    SupportedLanguageCodes.English,
-                    "Viet Nam Quoc Tu Guided Tour",
-                    "A guided tour introducing the main " +
-                    "areas within the Viet Nam Quoc Tu " +
-                    "complex.",
-                    "Welcome to the Viet Nam Quoc Tu " +
-                    "guided tour.",
-                    now),
-
-                CreateTourTranslation(
-                    SimplifiedChineseTourTranslationId,
-                    SupportedLanguageCodes
-                        .SimplifiedChinese,
-                    "越南国寺导览",
-                    "本导览介绍越南国寺范围内的主要参观区域。",
-                    "欢迎参加越南国寺导览。",
-                    now),
-
-                CreateTourTranslation(
-                    HongKongChineseTourTranslationId,
-                    SupportedLanguageCodes
-                        .TraditionalChineseHongKong,
-                    "越南國寺導覽",
-                    "本導覽介紹越南國寺範圍內的主要參觀區域。",
-                    "歡迎參加越南國寺導覽。",
-                    now),
-
-                CreateTourTranslation(
-                    SpanishTourTranslationId,
-                    SupportedLanguageCodes.Spanish,
-                    "Visita guiada a Viet Nam Quoc Tu",
-                    "Un recorrido que presenta las " +
-                    "principales áreas del complejo " +
-                    "Viet Nam Quoc Tu.",
-                    "Bienvenido a la visita guiada de " +
-                    "Viet Nam Quoc Tu.",
-                    now)
-            };
-
-        var missingTranslations =
-            translations
-                .Where(
-                    translation =>
-                        !existingLanguageCodeSet.Contains(
-                            translation.LanguageCode))
-                .ToArray();
-
-        if (missingTranslations.Length == 0)
-        {
-            return;
-        }
-
-        await dbContext.TourTranslations.AddRangeAsync(
-            missingTranslations,
-            cancellationToken);
     }
 
     private static async Task SeedLocationsAsync(
@@ -542,28 +376,6 @@ public static class DatabaseSeeder
             .AddRangeAsync(
                 missingTranslations,
                 cancellationToken);
-    }
-
-    private static TourTranslation CreateTourTranslation(
-        Guid id,
-        string languageCode,
-        string name,
-        string description,
-        string welcomeMessage,
-        DateTimeOffset createdAt)
-    {
-        return new TourTranslation
-        {
-            Id = id,
-            TourId = VietNamQuocTuTourId,
-            LanguageCode =
-                SupportedLanguageCodes.Normalize(
-                    languageCode),
-            Name = name,
-            Description = description,
-            WelcomeMessage = welcomeMessage,
-            CreatedAt = createdAt
-        };
     }
 
     private static TourLocationTranslation

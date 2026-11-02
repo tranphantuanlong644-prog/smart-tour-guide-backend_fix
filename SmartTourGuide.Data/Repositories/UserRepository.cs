@@ -1,67 +1,39 @@
-using Microsoft.EntityFrameworkCore;
-using SmartTourGuide.Data.Context;
+using System.Collections.Concurrent;
 using SmartTourGuide.Data.Entities;
 using SmartTourGuide.Data.Repositories.Interfaces;
 
 namespace SmartTourGuide.Data.Repositories;
 
-public sealed class UserRepository
-    : IUserRepository
+/// <summary>
+/// Keeps registered accounts in process memory because the application schema
+/// intentionally contains no Users table. Accounts are cleared on restart.
+/// </summary>
+public sealed class UserRepository : IUserRepository
 {
-    private readonly SmartTourGuideDbContext _dbContext;
-
-    public UserRepository(
-        SmartTourGuideDbContext dbContext)
-    {
-        ArgumentNullException.ThrowIfNull(
-            dbContext);
-
-        _dbContext = dbContext;
-    }
+    private readonly ConcurrentDictionary<string, User> _users = new(StringComparer.Ordinal);
 
     public Task<bool> ExistsByNormalizedEmailAsync(
-        string normalizedEmail,
-        CancellationToken cancellationToken = default)
+        string normalizedEmail, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            normalizedEmail);
-
-        return _dbContext.Users.AnyAsync(
-            user =>
-                user.NormalizedEmail ==
-                    normalizedEmail,
-            cancellationToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(normalizedEmail);
+        return Task.FromResult(_users.ContainsKey(normalizedEmail));
     }
 
     public Task<User?> GetByNormalizedEmailAsync(
-        string normalizedEmail,
-        CancellationToken cancellationToken = default)
+        string normalizedEmail, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            normalizedEmail);
-
-        return _dbContext.Users.FirstOrDefaultAsync(
-            user =>
-                user.NormalizedEmail ==
-                    normalizedEmail,
-            cancellationToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(normalizedEmail);
+        _users.TryGetValue(normalizedEmail, out var user);
+        return Task.FromResult(user);
     }
 
-    public async Task AddAsync(
-        User user,
-        CancellationToken cancellationToken = default)
+    public Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
-
-        await _dbContext.Users.AddAsync(
-            user,
-            cancellationToken);
+        if (!_users.TryAdd(user.NormalizedEmail, user))
+            throw new InvalidOperationException("An account with this email already exists.");
+        return Task.CompletedTask;
     }
 
-    public async Task SaveChangesAsync(
-        CancellationToken cancellationToken = default)
-    {
-        await _dbContext.SaveChangesAsync(
-            cancellationToken);
-    }
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

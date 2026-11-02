@@ -51,6 +51,26 @@ public sealed class TourQrCodeConfiguration
         builder.Property(qrCode => qrCode.TourId)
             .IsRequired();
 
+        builder.Property(qrCode => qrCode.TourCode)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        builder.Property(qrCode => qrCode.TourName)
+            .IsRequired()
+            .HasMaxLength(200);
+
+        builder.Property(qrCode => qrCode.TourDescription)
+            .HasMaxLength(4_000);
+
+        builder.Property(qrCode => qrCode.WelcomeMessage)
+            .HasMaxLength(2_000);
+
+        builder.Property(qrCode => qrCode.CoverImageUrl)
+            .HasMaxLength(2_000);
+
+        builder.Property(qrCode => qrCode.Address)
+            .HasMaxLength(500);
+
         builder.Property(qrCode => qrCode.AccessCode)
             .IsRequired()
             .HasMaxLength(100);
@@ -100,11 +120,6 @@ public sealed class TourQrCodeConfiguration
         builder.HasIndex(qrCode => qrCode.ExpiresAt)
             .HasDatabaseName(
                 "IX_TourQrCodes_ExpiresAt");
-
-        builder.HasOne(qrCode => qrCode.Tour)
-            .WithMany(tour => tour.QrCodes)
-            .HasForeignKey(qrCode => qrCode.TourId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(qrCode => qrCode.Sessions)
             .WithOne(session => session.SourceQrCode)

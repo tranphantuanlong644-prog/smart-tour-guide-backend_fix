@@ -32,22 +32,7 @@ public sealed class TourLocation
 
     public DateTimeOffset? UpdatedAt { get; set; }
 
-    public Tour Tour { get; set; } =
-        null!;
-
     public ICollection<TourLocationTranslation>
         Translations { get; set; } =
         new List<TourLocationTranslation>();
-
-    public ICollection<TourVisit> Visits
-        { get; set; } =
-        new List<TourVisit>();
-
-    public ICollection<AudioPlaybackProgress>
-        PlaybackProgresses { get; set; } =
-        new List<AudioPlaybackProgress>();
-
-    public ICollection<LocationDetectionLog>
-        LocationDetectionLogs { get; set; } =
-        new List<LocationDetectionLog>();
 }

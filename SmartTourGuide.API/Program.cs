@@ -118,7 +118,7 @@ builder.Services.AddDbContext<
 // Application dependencies
 // ========================================
 
-builder.Services.AddScoped<
+builder.Services.AddSingleton<
     IUserRepository,
     UserRepository>();
 

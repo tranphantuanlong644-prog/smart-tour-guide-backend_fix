@@ -32,7 +32,4 @@ public sealed class TourLocationTranslation
     public TourLocation TourLocation { get; set; } =
         null!;
 
-    public ICollection<AudioPlaybackProgress>
-        PlaybackProgresses { get; set; } =
-        new List<AudioPlaybackProgress>();
 }

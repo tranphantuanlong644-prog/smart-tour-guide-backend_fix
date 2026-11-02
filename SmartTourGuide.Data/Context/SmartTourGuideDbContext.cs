@@ -13,17 +13,8 @@ public sealed class SmartTourGuideDbContext
     {
     }
 
-    public DbSet<User> Users =>
-        Set<User>();
-
     public DbSet<GuestIdentity> GuestIdentities =>
         Set<GuestIdentity>();
-
-    public DbSet<Tour> Tours =>
-        Set<Tour>();
-
-    public DbSet<TourTranslation> TourTranslations =>
-        Set<TourTranslation>();
 
     public DbSet<TourLocation> TourLocations =>
         Set<TourLocation>();
@@ -38,20 +29,6 @@ public sealed class SmartTourGuideDbContext
     public DbSet<TourSession> TourSessions =>
         Set<TourSession>();
 
-    public DbSet<TourVisit> TourVisits =>
-        Set<TourVisit>();
-
-    public DbSet<DashboardStatisticsReset>
-        DashboardStatisticsResets =>
-        Set<DashboardStatisticsReset>();
-
-    public DbSet<AudioPlaybackProgress>
-        AudioPlaybackProgresses =>
-        Set<AudioPlaybackProgress>();
-
-    public DbSet<LocationDetectionLog>
-        LocationDetectionLogs =>
-        Set<LocationDetectionLog>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
@@ -61,8 +38,12 @@ public sealed class SmartTourGuideDbContext
 
         base.OnModelCreating(modelBuilder);
 
+        ConfigureModel(modelBuilder);
+    }
+
+    internal static void ConfigureModel(ModelBuilder modelBuilder)
+    {
         modelBuilder.ApplyConfigurationsFromAssembly(
-            typeof(SmartTourGuideDbContext)
-                .Assembly);
+            typeof(SmartTourGuideDbContext).Assembly);
     }
 }
