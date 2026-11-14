@@ -202,47 +202,47 @@ public static class DatabaseSeeder
                 new LocationTranslationDefinition(
                     MainGateLocationId,
                     "main-gate",
-                    "Cổng chính",
-                    "Main Gate",
-                    "正门",
-                    "正門",
-                    "Entrada principal"),
+                    new("Cổng chính", "Cổng chính dẫn vào sân chùa Việt Nam Quốc Tự, nơi du khách bắt đầu hành trình tham quan."),
+                    new("Main Gate", "The main gate leads into the courtyard of Việt Nam Quốc Tự, where the visit begins."),
+                    new("正门", "正门通往越南国寺的庭院，是参观的起点。"),
+                    new("正門", "正門通往越南國寺嘅庭院，係參觀嘅起點。"),
+                    new("Entrada principal", "La entrada principal da acceso al patio de Việt Nam Quốc Tự, donde comienza la visita.")),
 
                 new LocationTranslationDefinition(
                     GeneralCampusLocationId,
                     "general-campus",
-                    "Khuôn viên tổng quan",
-                    "General Campus",
-                    "园区概览",
-                    "園區概覽",
-                    "Vista general del recinto"),
+                    new("Khuôn viên tổng quan", "Từ sân chùa, du khách có thể nhìn bao quát khuôn viên trước khi đi tiếp đến chính điện hoặc bảo tháp."),
+                    new("General Campus", "The courtyard offers a view of the temple grounds before visitors continue to the main hall or the stupa."),
+                    new("园区概览", "从庭院可以环顾寺院，再前往主殿或佛塔。"),
+                    new("園區概覽", "喺庭院可以望到寺院全貌，再行去主殿或者佛塔。"),
+                    new("Vista general del recinto", "Desde el patio se aprecia el conjunto del templo antes de continuar hacia el salón principal o la estupa.")),
 
                 new LocationTranslationDefinition(
                     MainHallLocationId,
                     "main-hall",
-                    "Chính điện",
-                    "Main Hall",
-                    "主殿",
-                    "主殿",
-                    "Salón principal"),
+                    new("Chính điện", "Chính điện là nơi thờ Phật và cử hành các nghi lễ chính của chùa."),
+                    new("Main Hall", "The main hall is where people pay homage to the Buddha and gather for the main ceremonies of the temple."),
+                    new("主殿", "主殿是礼佛和举行寺院主要仪式的地方。"),
+                    new("主殿", "主殿係善信禮佛同寺院舉行主要儀式嘅地方。"),
+                    new("Salón principal", "En el salón principal se venera a Buda y se celebran las principales ceremonias del templo.")),
 
                 new LocationTranslationDefinition(
                     StupaLocationId,
                     "stupa",
-                    "Bảo tháp",
-                    "Stupa",
-                    "佛塔",
-                    "佛塔",
-                    "Estupa"),
+                    new("Bảo tháp", "Bảo tháp nổi bật giữa khuôn viên chùa với các tầng tháp thu nhỏ dần về phía đỉnh."),
+                    new("Stupa", "The stupa stands out on the temple grounds, with tiers that narrow towards the top."),
+                    new("佛塔", "佛塔在寺院中格外醒目，塔身层层向上收窄。"),
+                    new("佛塔", "佛塔喺寺院入面十分搶眼，塔身一層層向塔頂收窄。"),
+                    new("Estupa", "La estupa destaca en el recinto por sus niveles superpuestos, que se estrechan hacia la cima.")),
 
                 new LocationTranslationDefinition(
                     HistoryAreaLocationId,
                     "history-area",
-                    "Khu vực lịch sử",
-                    "Historical Area",
-                    "历史区域",
-                    "歷史區域",
-                    "Área histórica")
+                    new("Khu vực lịch sử", "Khu vực lịch sử giới thiệu quá trình hình thành và phát triển của Việt Nam Quốc Tự."),
+                    new("Historical Area", "This area introduces the origins of Việt Nam Quốc Tự and how the temple has developed over time."),
+                    new("历史区域", "这里介绍越南国寺的由来和发展历程。"),
+                    new("歷史區域", "呢度介紹越南國寺嘅由來同發展歷程。"),
+                    new("Área histórica", "Esta zona presenta los orígenes de Việt Nam Quốc Tự y la evolución del templo a lo largo del tiempo."))
             };
 
         foreach (var definition in definitions)
@@ -260,20 +260,15 @@ public static class DatabaseSeeder
             LocationTranslationDefinition definition,
             CancellationToken cancellationToken)
     {
-        var existingLanguageCodes =
+        var existingTranslations =
             await dbContext.TourLocationTranslations
                 .Where(
                     translation =>
                         translation.TourLocationId ==
                             definition.LocationId)
-                .Select(
-                    translation =>
-                        translation.LanguageCode)
                 .ToListAsync(cancellationToken);
 
-        var existingLanguageCodeSet =
-            existingLanguageCodes.ToHashSet(
-                StringComparer.OrdinalIgnoreCase);
+        var byLanguage = existingTranslations.ToDictionary(x => x.LanguageCode, StringComparer.OrdinalIgnoreCase);
 
         var now = DateTimeOffset.UtcNow;
 
@@ -284,12 +279,11 @@ public static class DatabaseSeeder
                     definition.LocationId,
                     definition.AudioFilePrefix,
                     SupportedLanguageCodes.Vietnamese,
-                    definition.VietnameseTitle,
-                    "Nội dung giới thiệu ngắn về " +
-                    definition.VietnameseTitle + ".",
+                    definition.Vietnamese.Title,
+                    definition.Vietnamese.Description,
                     "Đây là nội dung thuyết minh thử nghiệm " +
                     "cho khu vực " +
-                    definition.VietnameseTitle +
+                    definition.Vietnamese.Title +
                     ". Nội dung chính thức sẽ được cập nhật " +
                     "sau khi được kiểm chứng.",
                     "Giọng đọc tiếng Việt",
@@ -299,12 +293,11 @@ public static class DatabaseSeeder
                     definition.LocationId,
                     definition.AudioFilePrefix,
                     SupportedLanguageCodes.English,
-                    definition.EnglishTitle,
-                    "A short introduction to the " +
-                    definition.EnglishTitle + ".",
+                    definition.English.Title,
+                    definition.English.Description,
                     "This is a demonstration narration " +
                     "for the " +
-                    definition.EnglishTitle +
+                    definition.English.Title +
                     ". The official content will be " +
                     "updated after verification.",
                     "English narrator",
@@ -315,12 +308,10 @@ public static class DatabaseSeeder
                     definition.AudioFilePrefix,
                     SupportedLanguageCodes
                         .SimplifiedChinese,
-                    definition.SimplifiedChineseTitle,
-                    "关于" +
-                    definition.SimplifiedChineseTitle +
-                    "的简短介绍。",
+                    definition.SimplifiedChinese.Title,
+                    definition.SimplifiedChinese.Description,
                     "这是" +
-                    definition.SimplifiedChineseTitle +
+                    definition.SimplifiedChinese.Title +
                     "的演示讲解内容。" +
                     "正式内容将在核实后更新。",
                     "普通话讲解",
@@ -331,12 +322,10 @@ public static class DatabaseSeeder
                     definition.AudioFilePrefix,
                     SupportedLanguageCodes
                         .TraditionalChineseHongKong,
-                    definition.TraditionalChineseTitle,
-                    "關於" +
-                    definition.TraditionalChineseTitle +
-                    "的簡短介紹。",
+                    definition.TraditionalChinese.Title,
+                    definition.TraditionalChinese.Description,
                     "這是" +
-                    definition.TraditionalChineseTitle +
+                    definition.TraditionalChinese.Title +
                     "的示範導覽內容。" +
                     "正式內容將在核實後更新。",
                     "粵語導覽",
@@ -346,12 +335,11 @@ public static class DatabaseSeeder
                     definition.LocationId,
                     definition.AudioFilePrefix,
                     SupportedLanguageCodes.Spanish,
-                    definition.SpanishTitle,
-                    "Una breve introducción a " +
-                    definition.SpanishTitle + ".",
+                    definition.Spanish.Title,
+                    definition.Spanish.Description,
                     "Esta es una narración de " +
                     "demostración para " +
-                    definition.SpanishTitle +
+                    definition.Spanish.Title +
                     ". El contenido oficial se " +
                     "actualizará después de su " +
                     "verificación.",
@@ -359,23 +347,30 @@ public static class DatabaseSeeder
                     now)
             };
 
-        var missingTranslations =
-            translations
-                .Where(
-                    translation =>
-                        !existingLanguageCodeSet.Contains(
-                            translation.LanguageCode))
-                .ToArray();
-
-        if (missingTranslations.Length == 0)
+        foreach (var translation in translations)
         {
-            return;
-        }
+            if (!byLanguage.TryGetValue(translation.LanguageCode, out var existing))
+            {
+                dbContext.TourLocationTranslations.Add(translation);
+                continue;
+            }
 
-        await dbContext.TourLocationTranslations
-            .AddRangeAsync(
-                missingTranslations,
-                cancellationToken);
+            // Only replace the original demo description on existing installations.
+            var placeholder = translation.LanguageCode switch
+            {
+                SupportedLanguageCodes.Vietnamese => $"Nội dung giới thiệu ngắn về {translation.Title}.",
+                SupportedLanguageCodes.English => $"A short introduction to the {translation.Title}.",
+                SupportedLanguageCodes.SimplifiedChinese => $"关于{translation.Title}的简短介绍。",
+                SupportedLanguageCodes.TraditionalChineseHongKong => $"關於{translation.Title}的簡短介紹。",
+                SupportedLanguageCodes.Spanish => $"Una breve introducción a {translation.Title}.",
+                _ => null
+            };
+            if (existing.Description == placeholder)
+            {
+                existing.Description = translation.Description;
+                existing.UpdatedAt = now;
+            }
+        }
     }
 
     private static TourLocationTranslation
@@ -449,12 +444,14 @@ public static class DatabaseSeeder
         };
     }
 
+    private sealed record LocalizedIntroduction(string Title, string Description);
+
     private sealed record LocationTranslationDefinition(
         Guid LocationId,
         string AudioFilePrefix,
-        string VietnameseTitle,
-        string EnglishTitle,
-        string SimplifiedChineseTitle,
-        string TraditionalChineseTitle,
-        string SpanishTitle);
+        LocalizedIntroduction Vietnamese,
+        LocalizedIntroduction English,
+        LocalizedIntroduction SimplifiedChinese,
+        LocalizedIntroduction TraditionalChinese,
+        LocalizedIntroduction Spanish);
 }
