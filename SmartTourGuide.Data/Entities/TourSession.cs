@@ -22,6 +22,8 @@ public sealed class TourSession
 
     public DateTimeOffset StartedAt { get; set; }
 
+    public bool ExcludedFromGuestTotal { get; set; }
+
     public DateTimeOffset ExpiresAt { get; set; }
 
     public DateTimeOffset? EndedAt { get; set; }

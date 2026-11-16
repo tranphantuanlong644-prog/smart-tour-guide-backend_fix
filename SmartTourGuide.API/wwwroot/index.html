@@ -36,42 +36,29 @@ let cachedTourCode = null;
 let cachedTourData = null;
 let guestSession = null;
 let guestHeartbeatTimer = null;
-let lastGuestInteraction = Date.now();
 let simulationMap = null;
 let simulationMarker = null;
 
-for (const eventName of ['pointerdown', 'touchstart', 'keydown', 'scroll']) {
- document.addEventListener(eventName, () => { lastGuestInteraction = Date.now(); }, { passive: true });
+function heartbeat() {
+  if (!guestSession || document.visibilityState !== 'visible') return;
+  fetch(`/api/public/tours/sessions/${encodeURIComponent(guestSession.sessionId)}/heartbeat`, {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ deviceId: guestSession.deviceId }), keepalive: true
+  }).catch(() => {});
 }
 
 function startGuestTracking(sessionId, deviceId) {
  if (guestHeartbeatTimer) clearInterval(guestHeartbeatTimer);
- lastGuestInteraction = Date.now();
  guestSession = { sessionId, deviceId };
- const heartbeat = () => {
-  if (!guestSession || document.visibilityState !== 'visible') return;
-  const audioPlaying = [...document.querySelectorAll('audio')].some(audio => !audio.paused && !audio.ended);
-  if (Date.now() - lastGuestInteraction > 120000 && !audioPlaying) return;
-  fetch(`/api/public/tours/sessions/${encodeURIComponent(guestSession.sessionId)}/heartbeat`, {
-   method: 'POST', headers: { 'Content-Type': 'application/json' },
-   body: JSON.stringify({ deviceId: guestSession.deviceId }), keepalive: true
-  }).catch(() => {});
- };
  heartbeat();
  guestHeartbeatTimer = setInterval(heartbeat, 20000);
 }
 
-document.addEventListener('visibilitychange', () => {
- if (document.visibilityState === 'visible' && guestSession) {
-  fetch(`/api/public/tours/sessions/${encodeURIComponent(guestSession.sessionId)}/heartbeat`, {
-   method: 'POST', headers: { 'Content-Type': 'application/json' },
-   body: JSON.stringify({ deviceId: guestSession.deviceId }), keepalive: true
-  }).catch(() => {});
- }
-});
+document.addEventListener('visibilitychange', heartbeat);
+window.addEventListener('pageshow', heartbeat);
 
-window.addEventListener('pagehide', () => {
- if (!guestSession) return;
+window.addEventListener('pagehide', event => {
+ if (!guestSession || event.persisted) return;
  const payload = new Blob([JSON.stringify({ deviceId: guestSession.deviceId })], { type: 'application/json' });
  navigator.sendBeacon(`/api/public/tours/sessions/${encodeURIComponent(guestSession.sessionId)}/end`, payload);
 });

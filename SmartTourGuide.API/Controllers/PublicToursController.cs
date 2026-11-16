@@ -170,6 +170,7 @@ public sealed class PublicToursController : ControllerBase
                     .FirstOrDefaultAsync(
                         x => x.GuestIdentityId == guest.Id
                             && x.TourId == qr.TourId
+                            && !x.ExcludedFromGuestTotal
                             && x.Status == TourSessionStatus.Active
                             && x.ExpiresAt > now,
                         cancellationToken);
@@ -255,6 +256,23 @@ public sealed class PublicToursController : ControllerBase
         });
     }
 
+
+    [HttpPost("sessions/{sessionId:guid}/heartbeat")]
+    public async Task<IActionResult> Heartbeat(
+        Guid sessionId, [FromBody] GuestSessionRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.DeviceId))
+            return BadRequest(new { message = "Thiếu mã thiết bị." });
+
+        var now = DateTimeOffset.UtcNow;
+        await _db.TourSessions
+            .Where(x => x.Id == sessionId && x.IdentityType == IdentityType.Guest
+                && x.Status == TourSessionStatus.Active && x.ExpiresAt > now
+                && x.GuestIdentity != null && x.GuestIdentity.DeviceId == request.DeviceId)
+            .ExecuteUpdateAsync(update => update.SetProperty(x => x.LastActivityAt, now), cancellationToken);
+        return NoContent();
+    }
 
     [HttpPost("sessions/{sessionId:guid}/end")]
     public async Task<IActionResult> EndGuestSession(
