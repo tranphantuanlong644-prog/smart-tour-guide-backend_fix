@@ -190,7 +190,11 @@ function renderTour(data,code,lang){
  content.innerHTML=`<h2>${escapeHtml(tourName)}</h2><p>${escapeHtml(tourDescription)}</p><p>${escapeHtml(welcomeMessage)}</p><label>${ui(lang,'language')}</label><select id="language">${languages.map((x,i)=>`<option value="${x}" ${x===lang?'selected':''}>${languageNameList(lang)[i]}</option>`).join('')}</select><button id="welcome">🔊 ${ui(lang,'welcome')}</button><p id="voice-status" class="muted" role="status" aria-live="polite"></p><section class="location-map"><h2>${ui(lang,'gpsTitle')}</h2><p class="map-help">${ui(lang,'gpsHelp')}</p><div id="sim-map" aria-label="${ui(lang,'mapAria')}"></div><p id="map-status" class="map-status muted" role="status" aria-live="polite">${ui(lang,'loadingMap')}</p></section><h2>${ui(lang,'areas')}</h2><div id="locations"></div>`;
  document.querySelector('#welcome').onclick=()=>speak(welcomeMessage,lang);
  document.querySelector('#language').onchange=e=>loadTour(code,e.target.value);
- document.querySelector('#locations').innerHTML=locations.map(l=>`<article class="location"><h3>${escapeHtml(l.displayOrder+'. '+l.name)}</h3><p>${escapeHtml(l.description)}</p></article>`).join('');
+ const locationList=document.querySelector('#locations');
+ locationList.innerHTML=locations.map((l,index)=>`<article class="location"><h3><button type="button" class="secondary" data-location-index="${index}">${escapeHtml(l.displayOrder+'. '+l.name)}</button></h3><p>${escapeHtml(l.description)}</p></article>`).join('');
+ locationList.querySelectorAll('[data-location-index]').forEach(button=>{
+  button.onclick=()=>openLocationDetail(locations[Number(button.dataset.locationIndex)],lang,code,true);
+ });
  renderSimulationMap(locations,lang,code);
  const requestedLocationId=new URLSearchParams(location.search).get('location');
  const requestedLocation=locations.find(x=>x.id===requestedLocationId);
