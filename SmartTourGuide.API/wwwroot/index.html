@@ -6,7 +6,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <style>
     :root{font-family:system-ui,sans-serif;color:#18332d;background:#f4f6f2}body{margin:0}.wrap{max-width:760px;margin:36px auto;padding:20px}.card{background:white;border-radius:18px;padding:24px;margin:16px 0;box-shadow:0 5px 24px #18332d12}h1{font-size:1.6rem}input,select,button{font:inherit;padding:12px;border-radius:10px;border:1px solid #cbd5ce}button{background:#174f41;color:white;border:0;cursor:pointer;margin:5px 4px 5px 0}button.secondary{background:#e4eee8;color:#18332d}.muted{color:#60726b}.location{border-top:1px solid #e4e9e5;padding:16px 0}.hidden{display:none}#qrcode{margin:20px 0}audio{width:100%}label{display:block;margin:12px 0 5px}#sim-map{height:430px;border-radius:14px;overflow:hidden;border:1px solid #d7e1da}.map-help{background:#edf4ef;padding:12px;border-radius:10px}.map-status{min-height:1.5em;font-weight:600}.map-fallback{height:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:18px;background:linear-gradient(145deg,#e9f4ee,#f8f7ec)}.map-fallback-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}.map-fallback-list button{text-align:left;margin:0}@media(max-width:600px){.wrap{margin:10px auto;padding:12px}.card{padding:18px}#sim-map{height:360px}}
+    #speech-position{display:block;width:100%;box-sizing:border-box;padding:0;min-height:36px;accent-color:#174f41}
+    #speech-time{font-variant-numeric:tabular-nums}
   </style>
+  <script src="/narration-player.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 </head>
@@ -109,7 +112,7 @@ function setVoiceStatus(message) {
  const el = document.querySelector('#voice-status') || document.querySelector('#detail-voice-status');
  if (el) el.textContent = message;
 }
-function speak(text, lang) {
+function speak(text, lang, rate=1) {
  if (!text) return;
  if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
   setVoiceStatus(ui(lang,'ttsUnsupported'));
@@ -129,15 +132,19 @@ function speak(text, lang) {
   setVoiceStatus(ui(lang,'voiceMissing',{language:voiceLanguage,locale:config.locale})+list+ui(lang,'installVoice'));
   return;
  }
- window.speechSynthesis.cancel();
+ if (window.speechSynthesis.speaking || window.speechSynthesis.pending) window.speechSynthesis.cancel();
  const utterance = new SpeechSynthesisUtterance(text);
+ utterance.rate = rate;
  utterance.lang = config.locale;
  if (voice) utterance.voice = voice;
  utterance.onstart = () => setVoiceStatus(voice
   ? ui(lang,'voiceUsing',{name:voice.name,locale:voice.lang})
   : ui(lang,'voiceRequested',{language:voiceLanguage,locale:config.locale}));
- utterance.onerror = event => setVoiceStatus(ui(lang,'voiceError',{error:event.error||'speech error'}));
+ utterance.onerror = event => {
+  if (!['canceled','interrupted'].includes(event.error)) setVoiceStatus(ui(lang,'voiceError',{error:event.error||'speech error'}));
+ };
  window.speechSynthesis.speak(utterance);
+ return utterance;
 }
 
 async function loadTour(code,lang='vi'){
@@ -161,6 +168,7 @@ async function loadTour(code,lang='vi'){
 }
 
 function renderTour(data,code,lang){
+ disposeNarration();
  const section=document.querySelector('#tour'), status=document.querySelector('#status'), content=document.querySelector('#content');
  section.classList.remove('hidden');
  document.documentElement.lang=lang;
@@ -198,7 +206,7 @@ function renderTour(data,code,lang){
  renderSimulationMap(locations,lang,code);
  const requestedLocationId=new URLSearchParams(location.search).get('location');
  const requestedLocation=locations.find(x=>x.id===requestedLocationId);
- if(requestedLocation)openLocationDetail(requestedLocation,lang,code,false);
+ if(requestedLocation)showLocationDetail(requestedLocation,lang,code,false);
 }
 
 function distanceMeters(a,b){
@@ -267,6 +275,8 @@ function openLocationDetail(locationData,lang,code,autoPlay){
 }
 
 function showLocationDetail(locationData,lang,code,autoPlay){
+ disposeNarration();
+ if(simulationMap){simulationMap.remove();simulationMap=null;simulationMarker=null;}
  const content=document.querySelector('#content');
  const narration=locationData.narrationText||ui(lang,'noNarration');
  content.innerHTML=`<button id="back-to-map" class="secondary">${ui(lang,'back')}</button><article class="card"><p class="muted">${ui(lang,'area')} ${escapeHtml(String(locationData.displayOrder||''))}</p><h2>${escapeHtml(locationData.name)}</h2>${locationData.imageUrl?`<img src="${escapeHtml(locationData.imageUrl)}" alt="${escapeHtml(locationData.name)}" style="max-width:100%;border-radius:12px">`:''}<p>${escapeHtml(locationData.description)}</p><h3>${ui(lang,'narration')}</h3><p>${escapeHtml(narration)}</p>${locationData.audioUrl?`<audio id="location-audio" controls preload="auto" src="${escapeHtml(locationData.audioUrl)}"></audio>`:''}<p id="detail-voice-status" class="muted" role="status" aria-live="polite">${autoPlay?ui(lang,'autoplay'):ui(lang,'pressPlay')}</p><button id="replay-narration">${ui(lang,'speak')}</button></article>`;
@@ -276,19 +286,13 @@ function showLocationDetail(locationData,lang,code,autoPlay){
   history.replaceState({},'',`${location.pathname}?${backParams.toString()}`);
   renderTour(cachedTourData,code,lang);
  };
- const playNarration=()=>{
-  const audio=document.querySelector('#location-audio');
-  const status=document.querySelector('#detail-voice-status');
-  if(audio){
-   audio.play().then(()=>{status.textContent=ui(lang,'playingAudio');}).catch(()=>{status.textContent=ui(lang,'audioFallback');speak(narration,lang);});
-  }else{
-   speak(narration,lang);
-   status.textContent=ui(lang,'deviceReading');
-  }
- };
- document.querySelector('#replay-narration').onclick=playNarration;
- if(autoPlay)playNarration();
+ disposeNarration=setupNarrationPlayer(narration,lang,autoPlay);
 }
+
+let disposeNarration=()=>{};
+window.addEventListener('popstate',()=>{
+ if(cachedTourData) renderTour(cachedTourData,cachedTourCode,new URLSearchParams(location.search).get('language')||'vi');
+});
 
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 

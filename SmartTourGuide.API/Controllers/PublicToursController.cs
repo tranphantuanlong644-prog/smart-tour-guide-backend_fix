@@ -113,7 +113,7 @@ public sealed class PublicToursController : ControllerBase
                             Description = selectedTranslation?.Description,
                             NarrationText = selectedTranslation?.NarrationText,
                             AudioUrl = GetAvailableAudioUrl(
-                                selectedTranslation?.AudioUrl),
+                                selectedTranslation?.AudioUrl, selectedTranslation?.NarrationText),
                             l.ImageUrl,
                             l.DisplayOrder,
                             l.Latitude,
@@ -126,7 +126,7 @@ public sealed class PublicToursController : ControllerBase
                                 t.Title,
                                 t.Description,
                                 t.NarrationText,
-                                AudioUrl = GetAvailableAudioUrl(t.AudioUrl)
+                                AudioUrl = GetAvailableAudioUrl(t.AudioUrl, t.NarrationText)
                             }).ToList()
                         };
                     }).ToList()
@@ -302,7 +302,7 @@ public sealed class PublicToursController : ControllerBase
 
     public sealed record GuestSessionRequest(string DeviceId);
 
-    private string? GetAvailableAudioUrl(string? audioUrl)
+    private string? GetAvailableAudioUrl(string? audioUrl, string? narration)
     {
         if (string.IsNullOrWhiteSpace(audioUrl))
             return null;
@@ -323,7 +323,13 @@ public sealed class PublicToursController : ControllerBase
             return null;
 
         var physicalPath = Path.Combine(webRootPath, "audio", fileName);
-        return System.IO.File.Exists(physicalPath) ? normalizedUrl : null;
+        if (System.IO.File.Exists(physicalPath)) return normalizedUrl;
+        if (string.IsNullOrWhiteSpace(narration)) return null;
+
+        // A packaged recording is valid only for the exact text it reads.
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(narration));
+        var recording = $"{Path.GetFileNameWithoutExtension(fileName)}-{Convert.ToHexStringLower(hash.AsSpan(0, 8))}.wav";
+        return System.IO.File.Exists(Path.Combine(webRootPath, "audio", recording)) ? $"/audio/{recording}" : null;
     }
 
 }
