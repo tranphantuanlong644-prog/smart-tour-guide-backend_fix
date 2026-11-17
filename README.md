@@ -1,5 +1,13 @@
 # SmartTourGuide Backend
 
+## Bảng phân công nhiệm vụ:
+
+Thành viên 	          MSSV	      Phân công nhiệm vụ 
+Nguyễn Phúc Duy Anh	  3124411012	Test phần mêm, đưa ra ý kiến như 1 khách hàng
+Trần Phan Tuấn Long 	3124411154	Code phần mềm theo 3 lớp, làm docs
+Bùi Thọ Khánh Trình 	3124411322	Tạo qr và gps, admin, PRD 
+
+
 ## Local development
 
 The API targets .NET 10 and uses SQL Server. The checked-in connection string
