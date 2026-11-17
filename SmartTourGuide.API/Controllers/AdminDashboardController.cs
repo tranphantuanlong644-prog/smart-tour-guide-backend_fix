@@ -18,12 +18,13 @@ public sealed class AdminDashboardController : ControllerBase
 
     private IQueryable<TourSession> ActiveGuestSessions(DateTimeOffset now)
     {
-        var activeSince = now.AddSeconds(-120);
+        // Guest heartbeats arrive every 3 seconds; admin polls every 2 seconds.
+        var activeSince = now.AddSeconds(-13);
         return _db.TourSessions
             .Where(x => x.IdentityType == IdentityType.Guest
                 && x.Status == TourSessionStatus.Active
                 && x.ExpiresAt > now
-                && x.LastActivityAt >= activeSince
+                && x.LastActivityAt > activeSince
                 && x.GuestIdentityId.HasValue);
     }
 

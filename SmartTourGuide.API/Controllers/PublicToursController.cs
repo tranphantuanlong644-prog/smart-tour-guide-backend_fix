@@ -318,18 +318,14 @@ public sealed class PublicToursController : ControllerBase
         if (string.IsNullOrWhiteSpace(fileName))
             return null;
 
-        var webRootPath = _environment.WebRootPath;
-        if (string.IsNullOrWhiteSpace(webRootPath))
-            return null;
-
-        var physicalPath = Path.Combine(webRootPath, "audio", fileName);
-        if (System.IO.File.Exists(physicalPath)) return normalizedUrl;
+        var assets = _environment.WebRootFileProvider;
+        if (assets.GetFileInfo($"audio/{fileName}").Exists) return $"/audio/{fileName}";
         if (string.IsNullOrWhiteSpace(narration)) return null;
 
         // A packaged recording is valid only for the exact text it reads.
         var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(narration));
         var recording = $"{Path.GetFileNameWithoutExtension(fileName)}-{Convert.ToHexStringLower(hash.AsSpan(0, 8))}.wav";
-        return System.IO.File.Exists(Path.Combine(webRootPath, "audio", recording)) ? $"/audio/{recording}" : null;
+        return assets.GetFileInfo($"audio/{recording}").Exists ? $"/audio/{recording}" : null;
     }
 
 }

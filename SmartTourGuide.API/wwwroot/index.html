@@ -8,6 +8,10 @@
     :root{font-family:system-ui,sans-serif;color:#18332d;background:#f4f6f2}body{margin:0}.wrap{max-width:760px;margin:36px auto;padding:20px}.card{background:white;border-radius:18px;padding:24px;margin:16px 0;box-shadow:0 5px 24px #18332d12}h1{font-size:1.6rem}input,select,button{font:inherit;padding:12px;border-radius:10px;border:1px solid #cbd5ce}button{background:#174f41;color:white;border:0;cursor:pointer;margin:5px 4px 5px 0}button.secondary{background:#e4eee8;color:#18332d}.muted{color:#60726b}.location{border-top:1px solid #e4e9e5;padding:16px 0}.hidden{display:none}#qrcode{margin:20px 0}audio{width:100%}label{display:block;margin:12px 0 5px}#sim-map{height:430px;border-radius:14px;overflow:hidden;border:1px solid #d7e1da}.map-help{background:#edf4ef;padding:12px;border-radius:10px}.map-status{min-height:1.5em;font-weight:600}.map-fallback{height:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:18px;background:linear-gradient(145deg,#e9f4ee,#f8f7ec)}.map-fallback-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}.map-fallback-list button{text-align:left;margin:0}@media(max-width:600px){.wrap{margin:10px auto;padding:12px}.card{padding:18px}#sim-map{height:360px}}
     #speech-position{display:block;width:100%;box-sizing:border-box;padding:0;min-height:36px;accent-color:#174f41}
     #speech-time{font-variant-numeric:tabular-nums}
+    .area-list{display:grid;gap:4px;max-height:9.25rem;overflow-y:auto;border:1px solid #cbd5ce;border-radius:12px;padding:5px}
+    .area-list button{margin:0;min-height:44px;text-align:start;background:transparent;color:#18332d}
+    .area-list button[aria-pressed="true"]{background:#174f41;color:white;font-weight:600}
+    .area-preview img{display:block;width:100%;height:auto;border-radius:12px}
   </style>
   <script src="/narration-player.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
@@ -54,7 +58,7 @@ function startGuestTracking(sessionId, deviceId) {
  if (guestHeartbeatTimer) clearInterval(guestHeartbeatTimer);
  guestSession = { sessionId, deviceId };
  heartbeat();
- guestHeartbeatTimer = setInterval(heartbeat, 20000);
+ guestHeartbeatTimer = setInterval(heartbeat, 3000);
 }
 
 document.addEventListener('visibilitychange', heartbeat);
@@ -169,6 +173,7 @@ async function loadTour(code,lang='vi'){
 
 function renderTour(data,code,lang){
  disposeNarration();
+ const previousArea=document.querySelector('.area-list button[aria-pressed="true"]')?.dataset.id;
  const section=document.querySelector('#tour'), status=document.querySelector('#status'), content=document.querySelector('#content');
  section.classList.remove('hidden');
  document.documentElement.lang=lang;
@@ -199,10 +204,22 @@ function renderTour(data,code,lang){
  document.querySelector('#welcome').onclick=()=>speak(welcomeMessage,lang);
  document.querySelector('#language').onchange=e=>loadTour(code,e.target.value);
  const locationList=document.querySelector('#locations');
- locationList.innerHTML=locations.map((l,index)=>`<article class="location"><h3><button type="button" class="secondary" data-location-index="${index}">${escapeHtml(l.displayOrder+'. '+l.name)}</button></h3><p>${escapeHtml(l.description)}</p></article>`).join('');
- locationList.querySelectorAll('[data-location-index]').forEach(button=>{
-  button.onclick=()=>openLocationDetail(locations[Number(button.dataset.locationIndex)],lang,code,true);
- });
+ if(locations.length){
+  locationList.innerHTML=`<div class="area-list" role="group" aria-label="${escapeHtml(ui(lang,'areas'))}">${locations.map(l=>`<button type="button" data-id="${escapeHtml(l.id)}" aria-controls="area-preview" aria-pressed="false">${escapeHtml(l.displayOrder+'. '+l.name)}</button>`).join('')}</div><article class="area-preview" id="area-preview" aria-live="polite"></article>`;
+  const list=locationList.querySelector('.area-list');
+  const preview=locationList.querySelector('.area-preview');
+  function selectArea(button){
+   const area=locations.find(l=>String(l.id)===button.dataset.id);
+   list.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed','false');
+   button.setAttribute('aria-pressed','true');
+   preview.innerHTML=`<h3>${escapeHtml(area.name)}</h3><p>${escapeHtml(area.description)}</p>${area.imageUrl?`<img src="${escapeHtml(area.imageUrl)}" alt="${escapeHtml(area.name)}" loading="lazy">`:''}`;
+  }
+  const buttons=Array.from(list.querySelectorAll('button'));
+  buttons.forEach(button=>button.onclick=()=>selectArea(button));
+  const initial=buttons.find(button=>button.dataset.id===previousArea)||buttons[0];
+  selectArea(initial);
+  list.scrollTop=Math.max(0,initial.getBoundingClientRect().bottom-list.getBoundingClientRect().bottom+5);
+ }
  renderSimulationMap(locations,lang,code);
  const requestedLocationId=new URLSearchParams(location.search).get('location');
  const requestedLocation=locations.find(x=>x.id===requestedLocationId);

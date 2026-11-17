@@ -21,6 +21,7 @@
     .overview{color:#fff;background:linear-gradient(100deg,rgba(12,37,31,.86),rgba(12,37,31,.52)),#173c35 url("./background-admin.webp") center/cover}
     .overview .muted{color:#f1f6f3}
     .overview .stat{background:rgba(244,249,245,.94);color:#18332d}
+    .session-presence{white-space:nowrap;color:#53645e}.session-presence[data-active=true]{color:#185b41;font-weight:600}
   </style>
 </head>
 <body>
@@ -38,7 +39,7 @@
     <p class="small muted">Lấy IPv4 của card Wi‑Fi máy tính bằng lệnh <code>ipconfig</code>. Điện thoại cần cùng Wi‑Fi/hotspot.</p>
     <div class="qr-layout"><div id="qrimage" class="qr-box">Nhập địa chỉ ở trên để hiện QR</div><div><strong>Tour: Tham quan Việt Nam Quốc Tự</strong><p id="qrurl" class="small"></p><button id="download" disabled>Tải ảnh QR</button></div></div>
   </section>
-  <section class="card"><h2>Phiên khách gần đây</h2><p class="muted small">Hệ thống ghi nhận phiên truy cập bằng mã thiết bị ngẫu nhiên, không thu tên hoặc số điện thoại. Hiển thị tối đa 100 phiên mới nhất.</p><div class="tablewrap"><table><thead><tr><th>Tour</th><th>Ngôn ngữ</th><th>Bắt đầu</th><th>Hoạt động gần nhất</th></tr></thead><tbody id="sessions"></tbody></table></div></section>
+  <section class="card"><h2>Phiên khách gần đây</h2><p class="muted small">Hệ thống ghi nhận phiên truy cập bằng mã thiết bị ngẫu nhiên, không thu tên hoặc số điện thoại. Hiển thị tối đa 100 phiên mới nhất.</p><div class="tablewrap"><table><thead><tr><th>Tour</th><th>Ngôn ngữ</th><th>Bắt đầu</th><th>Hoạt động gần nhất</th><th>Trạng thái</th></tr></thead><tbody id="sessions"></tbody></table></div></section>
   </div>
 </main>
 <script>
@@ -48,6 +49,7 @@ const date=s=>s?new Date(s).toLocaleString('vi-VN'):'—';
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function message(text,warning=false){$('#status').textContent=text;$('#status').className=warning?'status notice':'status muted'}
 let refreshTimer=null;
+let refreshVersion=0;
 async function api(path,options={}){
   const response=await fetch('/api/admin'+path,{cache:'no-store',...options});
   if(!response.ok){
@@ -69,19 +71,26 @@ function renderQr(){
   $('#qrurl').textContent=url;$('#download').disabled=false;
 }
 async function refresh(){
+  const version=++refreshVersion;
   try{
-    message('Đang tải thống kê…');
     const [overview,sessions]=await Promise.all([api('/overview'),api('/sessions')]);
+    if(version!==refreshVersion)return;
     $('#stats').innerHTML=[['Tour đang mở',overview.tours],['Tổng lượt quét',overview.scans],['Tổng khách',overview.guestSessions],['Người đang sử dụng',overview.activeSessions]].map(([name,value])=>`<div class="stat"><span>${name}</span><strong>${value}</strong></div>`).join('');
-    $('#sessions').innerHTML=sessions.map(s=>`<tr><td>${escapeHtml(s.tourName)}</td><td>${escapeHtml(s.languageCode)}</td><td>${date(s.startedAt)}</td><td>${date(s.lastActivityAt)}</td></tr>`).join('')||'<tr><td colspan="4">Chưa có phiên khách trong kỳ thống kê này</td></tr>';
-    message('Đã tải dữ liệu Dashboard. Tự làm mới mỗi 15 giây.');
+    $('#sessions').innerHTML=sessions.map(s=>`<tr><td>${escapeHtml(s.tourName)}</td><td>${escapeHtml(s.languageCode)}</td><td>${date(s.startedAt)}</td><td>${date(s.lastActivityAt)}</td><td class="session-presence" data-active="${s.isActive === true}">${s.isActive ? 'Đang hoạt động' : 'Không hoạt động'}</td></tr>`).join('')||'<tr><td colspan="5">Chưa có phiên khách trong kỳ thống kê này</td></tr>';
+    message('Đã tải dữ liệu Dashboard. Tự làm mới mỗi 2 giây.');
   }catch(error){
+    if(version!==refreshVersion)return;
     message('Không tải được Dashboard. Hãy mở http://localhost:5011/admin/ và bảo đảm backend đang chạy ở Development. Chi tiết: '+error.message,true);
   }
 }
 async function initialize(){
   await refresh();
-  if(!refreshTimer)refreshTimer=setInterval(refresh,15000);
+  if(!refreshTimer)refreshTimer=setInterval(()=>{if(!pollPending)pollDashboard();},2000);
+}
+let pollPending=false;
+async function pollDashboard(){
+  pollPending=true;
+  try{await refresh();}finally{pollPending=false;}
 }
 $('#visitorBase').addEventListener('input',renderQr);
 window.addEventListener('load',renderQr);

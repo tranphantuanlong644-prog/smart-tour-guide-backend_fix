@@ -36,11 +36,15 @@ function setupNarrationPlayer(text, lang, autoPlay) {
  const format = seconds => Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0');
  function updateTime() {
   if (audio) {
-   if (!Number.isFinite(audio.duration) || audio.duration <= 0) {slider.disabled = true; return;}
+   if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+    slider.disabled = true;
+    time.textContent = '0:00 / —';
+    return;
+   }
    slider.disabled = false;
    slider.max = audio.duration;
    slider.value = audio.ended ? audio.duration : audio.currentTime;
-   const label = format(Number(slider.value)/audio.playbackRate)+' / '+format(audio.duration/audio.playbackRate);
+   const label = format(Number(slider.value))+' / '+format(audio.duration);
    if (time.textContent !== label) time.textContent = label;
    slider.setAttribute('aria-valuetext',label);
   } else {

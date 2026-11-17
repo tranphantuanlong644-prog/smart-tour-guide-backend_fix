@@ -13,7 +13,7 @@ Profile `lan` đặt `ASPNETCORE_ENVIRONMENT=Development`. Trên chính laptop �
 - Admin: http://localhost:5011/admin/
 - Health: http://localhost:5011/health/ready
 
-Trang Admin sẽ tự tải Tổng quan và Phiên khách gần đây, không hiển thị form đăng nhập hoặc nút đăng xuất. Dữ liệu dashboard tự làm mới mỗi 15 giây.
+Trang Admin tự tải Tổng quan và Phiên khách gần đây mỗi 2 giây. Khi điện thoại đóng app mà không gửi được tín hiệu thoát, phiên chuyển sang không hoạt động sau 13 giây kể từ tín hiệu hoạt động cuối cùng.
 
 ## Giới hạn bảo mật
 
