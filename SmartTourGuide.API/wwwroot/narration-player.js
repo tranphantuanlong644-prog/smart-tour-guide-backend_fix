@@ -1,4 +1,5 @@
 const measuredNarrationRates = new Map();
+const narrationLimitSeconds = 5;
 
 function setupNarrationPlayer(text, lang, autoPlay) {
  const labels = {
@@ -15,13 +16,14 @@ function setupNarrationPlayer(text, lang, autoPlay) {
   <div id="speech-timeline">
    <label for="speech-position">${labels[1]}</label>
    <input id="speech-position" type="range" min="0" step="0.01" value="0">
-   
+   <p id="five-second-message" role="status" aria-live="polite" hidden></p>
   </div>
   <span id="speech-time"></span><label for="narration-rate">${labels[0]}</label>
   <select id="narration-rate">${[0.75,1,1.25,2].map(n=>`<option value="${n}" ${n===1?'selected':''}>${n}×</option>`).join('')}</select>`);
  const slider = document.querySelector('#speech-position');
  const time = document.querySelector('#speech-time');
  const rate = document.querySelector('#narration-rate');
+ const fiveSecondMessage = document.querySelector('#five-second-message');
  // Native audio has its own accurate, seekable timeline. Device speech exposes text offsets.
  const words = typeof Intl.Segmenter === 'function'
   ? Array.from(new Intl.Segmenter(lang,{granularity:'word'}).segment(text)).filter(part=>part.isWordLike)
@@ -35,22 +37,44 @@ function setupNarrationPlayer(text, lang, autoPlay) {
  const listenedLabel = {vi:'Đã nghe',en:'Listening time','zh-CN':'已收听','zh-HK':'已收聽',es:'Tiempo escuchado'}[lang] || 'Listening time';
  const format = seconds => Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0');
  function updateTime() {
+  const elapsedNow = audio
+   ? audio.currentTime
+   : listened + (startedAt === null ? 0 : (performance.now()-startedAt)/1000);
+  fiveSecondMessage.hidden = elapsedNow < narrationLimitSeconds;
+  if (elapsedNow >= narrationLimitSeconds) fiveSecondMessage.textContent = 'hello';
   if (audio) {
    if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
     slider.disabled = true;
-    time.textContent = '0:00 / —';
+   time.textContent = '0:00 / —';
     return;
    }
    slider.disabled = false;
-   slider.max = audio.duration;
-   slider.value = audio.ended ? audio.duration : audio.currentTime;
-   const label = format(Number(slider.value))+' / '+format(audio.duration);
+   const duration = Math.min(audio.duration, narrationLimitSeconds);
+   slider.max = duration;
+   slider.value = audio.ended ? duration : Math.min(audio.currentTime, duration);
+   const label = format(Number(slider.value))+' / '+format(duration);
    if (time.textContent !== label) time.textContent = label;
+   if (audio.currentTime >= narrationLimitSeconds && !audio.paused && !audio.ended) {
+    audio.currentTime = narrationLimitSeconds;
+    audio.pause();
+    time.textContent = format(narrationLimitSeconds)+' / '+format(narrationLimitSeconds);
+    fiveSecondMessage.hidden = false;
+    fiveSecondMessage.textContent = 'hello';
+   }
    slider.setAttribute('aria-valuetext',label);
   } else {
    const elapsed = listened + (startedAt === null ? 0 : (performance.now()-startedAt)/1000);
    const label = listenedLabel+' '+format(elapsed);
    if (time.textContent !== label) time.textContent = label;
+   if (elapsed >= narrationLimitSeconds && utterance) {
+    stopSpeech();
+    listened = narrationLimitSeconds;
+    position = offsets.length;
+    slider.value = slider.max;
+    time.textContent = format(narrationLimitSeconds);
+    fiveSecondMessage.hidden = false;
+    fiveSecondMessage.textContent = 'hello';
+   }
   }
  }
  function finishClock(segmentSeconds) {
@@ -191,6 +215,7 @@ function setupNarrationPlayer(text, lang, autoPlay) {
   slider.disabled = false;
   slider.step = '0.01';
   slider.max = offsets.length;
+ fiveSecondMessage.hidden = true;
   status.textContent = ui(lang,'audioFallback');
   display();
  }
